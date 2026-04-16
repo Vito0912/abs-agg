@@ -1,0 +1,35 @@
+{
+  "id": "gawayback",
+  "name": "Graphic Audio Wayback",
+  "available": true,
+  "description": "Fetches metadata from the wayback machine's archive of Graphic Audio's catalog. Graphic Audio produces dramatized audiobooks with full cast, music, and sound effects.",
+  "url": "https://www.graphicaudiointernational.net/",
+  "parameters": [
+    {
+      "name": "limit",
+      "required": false,
+      "validation": {
+        "type": "int",
+        "min": 1,
+        "max": 20
+      },
+      "description": "Maximum number of results to return (default: 10, max: 20)"
+    }
+  ],
+  "returnedFields": [
+    "title",
+    "subtitle",
+    "author",
+    "narrator",
+    "description",
+    "cover",
+    "isbn",
+    "asin",
+    "genres",
+    "series",
+    "publishedYear"
+  ],
+  "comments": [
+    "Credits to https://github.com/binyaminyblatt/graphicaudio_scraper"
+  ]
+}
