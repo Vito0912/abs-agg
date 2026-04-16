@@ -14,6 +14,7 @@ abs-agg named after "aggregate" and the German "AGG", because each provider shou
 - BookBeat
 - Goodreads
 - Graphic Audio
+- Graphic Audio Wayback Machine
 - Hardcover
 - LibriVox
 - Storytel

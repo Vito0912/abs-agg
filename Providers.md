@@ -1,19 +1,20 @@
 # Metadata Providers
 
-Total Providers: 11
+Total Providers: 12
 
 ## Table of Contents
 
-- [ARD Audiothek](#ardaudiothek)
+- [ARD Audiothek](#ard-audiothek)
 - [Audioteka](#audioteka)
-- [Big Finish](#bigfinish)
+- [Big Finish](#big-finish)
 - [BookBeat](#bookbeat)
 - [Die drei ???](#dreifragezeichen)
 - [Goodreads](#goodreads)
-- [Graphic Audio](#graphicaudio)
+- [Graphic Audio](#graphic-audio)
+- [Graphic Audio Wayback Machine](#graphic-audio-wayback-machine)
 - [Hardcover](#hardcover)
 - [LibriVox](#librivox)
-- [Soundbooth Theater](#soundbooththeater)
+- [Soundbooth Theater](#soundbooth-theater)
 - [Storytel](#storytel)
 
 ---
@@ -387,6 +388,57 @@ Under "Auth" use `abs`
 ### Comments
 
 - Credits to https://github.com/binyaminyblatt/graphicaudio_scraper
+
+---
+
+## Graphic Audio Wayback Machine
+
+**ID:** `gawayback`
+
+**Description:** Fetches metadata from the Wayback Machine's archive of Graphic Audio's catalog. This is useful for the Graphic Audio titles that are no longer available on the Graphic Audio website. This is a modified version of the Graphic Audio provider that uses the wayback_results dataset from https://github.com/binyaminyblatt/graphicaudio_scraper.
+
+### Parameters
+
+#### Optional Parameters
+
+| Name | Type | Validation | Description |
+|------|------|------------|-------------|
+| `limit` | int | 1-20 | Maximum number of results to return (default: 10, max: 20) |
+
+### Returned Fields
+
+- `title`
+- `subtitle`
+- `author`
+- `narrator`
+- `description`
+- `cover`
+- `isbn`
+- `asin`
+- `genres`
+- `series`
+- `publishedYear`
+
+### Example Request
+
+```
+GET /gawayback/search?title=example&author=author
+```
+
+### Add to Audiobookshelf
+
+```
+https://provider.vito0912.de/gawayback
+```
+
+Under "Auth" use `abs`
+
+> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
+
+### Comments
+
+- Credits to https://github.com/binyaminyblatt/graphicaudio_scraper
+
 
 ---
 
