@@ -1,0 +1,31 @@
+{
+  "id": "storygraph",
+  "name": "The StoryGraph",
+  "available": true,
+  "description": "Fetches book metadata from The StoryGraph.",
+  "url": "https://app.thestorygraph.com",
+  "parameters": [
+    {
+      "name": "limit",
+      "required": false,
+      "validation": {
+        "type": "int",
+        "min": 1,
+        "max": 5
+      },
+      "description": "Maximum number of results to return (default: 3, max: 5)"
+    }
+  ],
+  "returnedFields": [
+    "title",
+    "author",
+    "publisher",
+    "publishedYear",
+    "description",
+    "cover",
+    "isbn",
+    "language",
+    "poweredBy"
+  ],
+  "comments": ["Uses The StoryGraph's unauthenticated public turbo api"]
+}

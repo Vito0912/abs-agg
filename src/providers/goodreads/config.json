@@ -2,6 +2,7 @@
   "id": "goodreads",
   "name": "Goodreads",
   "available": true,
+  "addToAudiobookshelf": true,
   "description": "Book metadata from Goodreads. Note: Covers may be low quality or missing. API is deprecated but still functional.",
   "url": "https://www.goodreads.com",
   "requiredEnv": ["GOODREADS_API_KEY"],

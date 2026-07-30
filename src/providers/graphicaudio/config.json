@@ -2,6 +2,7 @@
   "id": "graphicaudio",
   "name": "Graphic Audio",
   "available": true,
+  "addToAudiobookshelf": true,
   "description": "Fetches metadata from Graphic Audio's catalog. Graphic Audio produces dramatized audiobooks with full cast, music, and sound effects.",
   "url": "https://www.graphicaudiointernational.net/",
   "parameters": [

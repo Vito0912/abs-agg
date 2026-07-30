@@ -16,7 +16,9 @@ abs-agg named after "aggregate" and the German "AGG", because each provider shou
 - Graphic Audio
 - Hardcover
 - LibriVox
+- Libro
 - Storytel
+- The StoryGraph
 - Die drei ???
 - Soundbooth
 

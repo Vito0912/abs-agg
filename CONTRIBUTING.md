@@ -14,6 +14,7 @@ Use the `example` provider as a reference template.
   "id": "myprovider",
   "name": "My Provider",
   "available": true,
+  "addToAudiobookshelf": false,
   "description": "Description of what this provider does",
   "url": "https://example.com",
   "parameters": [

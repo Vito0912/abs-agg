@@ -99,16 +99,18 @@ function generateProviderSection(config: ProviderConfig): string {
   }
   section += '```\n\n'
 
-  section += '### Add to Audiobookshelf\n\n'
-  section += '```\n'
-  if (requiredParams.length > 0) {
-    const exampleParams = requiredParams.map((p) => `${p.name}:${getExampleValue(p)}`).join('/')
-    section += `https://provider.vito0912.de/${config.id}/${exampleParams}\n`
-  } else {
-    section += `https://provider.vito0912.de/${config.id}\n`
+  if (config.addToAudiobookshelf) {
+    section += '### Add to Audiobookshelf\n\n'
+    section += '```\n'
+    if (requiredParams.length > 0) {
+      const exampleParams = requiredParams.map((p) => `${p.name}:${getExampleValue(p)}`).join('/')
+      section += `https://provider.vito0912.de/${config.id}/${exampleParams}\n`
+    } else {
+      section += `https://provider.vito0912.de/${config.id}\n`
+    }
+    section += '```\n\nUnder "Auth" use `abs`\n\n'
+    section += '> The URL can be replaced by your own deployment. The hosted provider can break at any moment.\n\n'
   }
-  section += '```\n\nUnder "Auth" use `abs`\n\n'
-  section += '> The URL can be replaced by your own deployment. The hosted provider can break at any moment.\n\n'
 
   if (config.comments.length > 0) {
     section += '### Comments\n\n'

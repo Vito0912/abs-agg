@@ -2,6 +2,7 @@
   "id": "hardcover",
   "name": "Hardcover",
   "available": true,
+  "addToAudiobookshelf": true,
   "description": "Book metadata from Hardcover.app",
   "url": "https://hardcover.app",
   "requiredEnv": ["HARDCOVER_TOKEN"],

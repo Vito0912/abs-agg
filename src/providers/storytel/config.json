@@ -2,6 +2,7 @@
   "id": "storytel",
   "name": "Storytel",
   "available": true,
+  "addToAudiobookshelf": true,
   "description": "Fetches metadata from Storytel's public search API.",
   "url": "https://www.storytel.com/",
   "parameters": [

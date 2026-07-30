@@ -1,6 +1,6 @@
 # Metadata Providers
 
-Total Providers: 13
+Total Providers: 14
 
 ## Table of Contents
 
@@ -17,6 +17,7 @@ Total Providers: 13
 - [Libro.fm](#librofm)
 - [Soundbooth Theater](#soundbooththeater)
 - [Storytel](#storytel)
+- [The StoryGraph](#storygraph)
 
 ---
 
@@ -166,16 +167,6 @@ Under "Auth" use `abs`
 GET /bigfinish/search?title=example&author=author
 ```
 
-### Add to Audiobookshelf
-
-```
-https://provider.vito0912.de/bigfinish
-```
-
-Under "Auth" use `abs`
-
-> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
-
 ---
 
 ## BookBeat
@@ -267,16 +258,6 @@ Under "Auth" use `abs`
 GET /deezer/search?title=example&author=author
 ```
 
-### Add to Audiobookshelf
-
-```
-https://provider.vito0912.de/deezer
-```
-
-Under "Auth" use `abs`
-
-> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
-
 ### Comments
 
 - Use the `DEEZER_ACCESS_TOKEN` environment variable to provide a user OAuth token for higher rate limits.
@@ -317,16 +298,6 @@ Under "Auth" use `abs`
 ```
 GET /dreifragezeichen/search?title=example&author=author
 ```
-
-### Add to Audiobookshelf
-
-```
-https://provider.vito0912.de/dreifragezeichen
-```
-
-Under "Auth" use `abs`
-
-> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
 
 ### Comments
 
@@ -529,16 +500,6 @@ Under "Auth" use `abs`
 GET /librivox/search?title=example&author=author
 ```
 
-### Add to Audiobookshelf
-
-```
-https://provider.vito0912.de/librivox
-```
-
-Under "Auth" use `abs`
-
-> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
-
 ### Comments
 
 - Use ^ prefix in title/author to anchor search to beginning of term
@@ -587,16 +548,6 @@ Under "Auth" use `abs`
 GET /librofm/search?title=example&author=author
 ```
 
-### Add to Audiobookshelf
-
-```
-https://provider.vito0912.de/librofm
-```
-
-Under "Auth" use `abs`
-
-> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
-
 ### Comments
 
 - Uses the unauthenticated and public Libro.fm API
@@ -633,16 +584,6 @@ No parameters required.
 ```
 GET /soundbooththeater/search?title=example&author=author
 ```
-
-### Add to Audiobookshelf
-
-```
-https://provider.vito0912.de/soundbooththeater
-```
-
-Under "Auth" use `abs`
-
-> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
 
 ### Comments
 
@@ -711,3 +652,42 @@ Under "Auth" use `abs`
 
 ---
 
+## The StoryGraph
+
+**ID:** `storygraph`
+
+**Description:** Fetches book metadata from The StoryGraph.
+
+**Metadata-URL:** [https://app.thestorygraph.com](https://app.thestorygraph.com)
+
+### Parameters
+
+#### Optional Parameters
+
+| Name | Type | Validation | Description |
+|------|------|------------|-------------|
+| `limit` | int | 1-5 | Maximum number of results to return (default: 3, max: 5) |
+
+### Returned Fields
+
+- `title`
+- `author`
+- `publisher`
+- `publishedYear`
+- `description`
+- `cover`
+- `isbn`
+- `language`
+- `poweredBy`
+
+### Example Request
+
+```
+GET /storygraph/search?title=example&author=author
+```
+
+### Comments
+
+- Uses The StoryGraph's unauthenticated public turbo api
+
+---

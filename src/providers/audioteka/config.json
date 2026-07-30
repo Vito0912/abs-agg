@@ -2,6 +2,7 @@
   "id": "audioteka",
   "name": "Audioteka",
   "available": true,
+  "addToAudiobookshelf": true,
   "description": "Fetches audiobook metadata from Audioteka, a popular audiobook platform in Central and Eastern Europe.",
   "url": "https://audioteka.com/",
   "parameters": [

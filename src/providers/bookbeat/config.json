@@ -2,6 +2,7 @@
   "id": "bookbeat",
   "name": "BookBeat",
   "available": true,
+  "addToAudiobookshelf": true,
   "description": "Fetches metadata from BookBeat's public search API.",
   "url": "https://www.bookbeat.com/",
   "parameters": [

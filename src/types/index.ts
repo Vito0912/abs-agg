@@ -46,6 +46,7 @@ export interface ProviderConfig {
   id: string
   name: string
   available?: boolean
+  addToAudiobookshelf?: boolean
   description: string
   url: string
   parameters: ProviderParameter[]

@@ -2,6 +2,7 @@
   "id": "ardaudiothek",
   "name": "ARD Audiothek",
   "available": true,
+  "addToAudiobookshelf": true,
   "description": "Fetches audiobook metadata from the ARD Audiothek (public broadcasters in Germany).",
   "url": "https://www.ardaudiothek.de/",
   "parameters": [
