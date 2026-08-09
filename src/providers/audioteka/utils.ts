@@ -153,17 +153,17 @@ export function extractLabeledArray($: cheerio.CheerioAPI, labels: string[]): st
 
 export function parseSearchResults($: cheerio.CheerioAPI): AudiotekaSearchMatch[] {
   const matches: AudiotekaSearchMatch[] = []
-  const $books = $('.adtk-item.teaser_teaser__FDajW')
+  const $books = $('li[class*="teaser_teaser__"]')
 
   $books.each((_, element) => {
     const $book = $(element)
 
-    const title = $book.find('.teaser_title__hDeCG').text().trim()
-    const bookPath = $book.find('.teaser_link__fxVFQ').attr('href')
+    const title = $book.find('[class*="teaser_title__"]').text().trim()
+    const bookPath = $book.find('[class*="teaser_link__"]').attr('href')
     const bookUrl = bookPath ? BASE_URL + bookPath : ''
-    const author = $book.find('.teaser_author__LWTRi').text().trim()
-    const cover = cleanCoverUrl($book.find('.teaser_coverImage__YMrBt').attr('src'))
-    const rating = parseFloat($book.find('.teaser-footer_rating__TeVOA').text().trim()) || undefined
+    const author = $book.find('[class*="teaser_author__"]').text().trim()
+    const cover = cleanCoverUrl($book.find('[class*="teaser_coverImage__"]').attr('src'))
+    const rating = parseFloat($book.find('[class*="teaser-footer_rating__"]').text().trim()) || undefined
 
     const id = $book.attr('data-item-id') || bookUrl.split('/').pop() || ''
 
