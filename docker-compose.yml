@@ -11,6 +11,9 @@ services:
       - HARDCOVER_TOKEN=${HARDCOVER_TOKEN}
       # See https://lazylibrarian.gitlab.io/config_importing/
       - GOODREADS_API_KEY=${GOODREADS_API_KEY}
+      # Big Finish Env Variables
+      - characters=false
+      - seriesmapping=false
     volumes:
       - ./data:/app/data
     # This container runs by default as 1000:1000 user.

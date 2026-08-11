@@ -146,6 +146,8 @@ Under "Auth" use `abs`
 | Name | Type | Validation | Description |
 |------|------|------------|-------------|
 | `limit` | int | 1-5 | Maximum number of results to return (default: 3, max: 5) |
+| 'characters' | boolean | true/false | allows characters to be returned as tags |
+| 'seriesmapping' | boolean | true/false | series mapping to standard fileds |
 
 ### Returned Fields
 

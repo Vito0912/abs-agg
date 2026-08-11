@@ -29,5 +29,9 @@
     "publisher",
     "duration"
   ],
-  "comments": []
+  "comments": [],
+  "compilerOptions": {
+"resolveJsonModule": true,
+"esModuleInterop": true
+}
 }

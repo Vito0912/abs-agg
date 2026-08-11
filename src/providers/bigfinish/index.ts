@@ -12,6 +12,10 @@ const config: ProviderConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
 const BASE_URL = 'https://www.bigfinish.com'
 const SEARCH_URL = `${BASE_URL}/api/search`
 
+const isEnvEnabled = (value: string | undefined): boolean => value?.trim().toLowerCase() === 'true'
+const ENABLE_SERIES_MAPPING = isEnvEnabled(process.env.seriesmapping)
+const ENABLE_CHARACTERS = isEnvEnabled(process.env.characters)
+
 const SEARCH_HEADERS = {
   'User-Agent':
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -28,6 +32,23 @@ const RSC_HEADERS = {
   Accept: '*/*',
   'Accept-Language': 'en-US,en;q=0.9',
   rsc: '1'
+}
+
+const SERIES_MAPPING_PATH = path.join(
+  process.cwd(),
+  'data',
+  'series-mapping.json'
+)
+
+function getSeriesMapping(): Record<string, string> {
+  try {
+    return JSON.parse(
+      fs.readFileSync(SERIES_MAPPING_PATH, 'utf8')
+    ) as Record<string, string>
+  } catch (error) {
+    console.error(`Failed to load ${SERIES_MAPPING_PATH}`, error)
+    return {}
+  }
 }
 
 interface BigFinishSearchResult {
@@ -60,6 +81,7 @@ interface ParsedBookData {
   duration: string | null
   writtenBy: string | null
   narratedBy: string | null
+  tags?: string[]
   coverUrl: string | null
   isbn: string | null
 }
@@ -157,7 +179,9 @@ export default class BigFinishProvider extends BaseProvider {
     if (!releaseData) return null
 
     const titleParts = this.extractTitleParts(releaseData.title || hit.name)
-    const narrators = this.namesFrom(releaseData.cast?.filter((person) => person.label?.toLowerCase() === 'narrator'))
+    const narratorNames = this.namesFrom(releaseData.cast?.filter((person) => person.label?.toLowerCase() === 'narrator'))
+    const narrators = ENABLE_CHARACTERS ? this.formatNarrators(releaseData.cast) : narratorNames
+    const narratorTags = ENABLE_CHARACTERS ? this.extractNarratorTags(releaseData.cast) : []
     const authors = this.namesFrom(releaseData.written_by)
     const technicalDetails = releaseData.production_credits?.technical_details as Record<string, unknown> | undefined
     const duration =
@@ -166,18 +190,20 @@ export default class BigFinishProvider extends BaseProvider {
       hit.duration
     const isbn = technicalDetails?.digital_retail_isbn || technicalDetails?.physical_retail_isbn
     const description = this.resolveRscText(rsc, releaseData.about?.summary) || hit.description || null
+    const about = ENABLE_CHARACTERS ? this.appendContributors(description, releaseData) : description
 
     return {
       schemaVersion: 3,
       url,
       title: releaseData.title || hit.name || null,
-      series: this.formatSeries(releaseData.range || titleParts.series),
+      series: ENABLE_SERIES_MAPPING ? this.formatSeries(releaseData.range || titleParts.series) : releaseData.range || titleParts.series,
       seriesTag: releaseData.release_number ? String(releaseData.release_number) : titleParts.seriesTag,
       releaseDate: releaseData.release_date || null,
-      about: this.appendContributors(description, releaseData),
+      about,
       duration: duration ? String(duration) : null,
       writtenBy: authors.join(', ') || null,
       narratedBy: narrators.join(', ') || null,
+      tags: narratorTags.length > 0 ? narratorTags : undefined,
       coverUrl: releaseData.image || hit.image || null,
       isbn: typeof isbn === 'string' ? isbn : null
     }
@@ -235,6 +261,47 @@ export default class BigFinishProvider extends BaseProvider {
     ]
   }
 
+  private formatNarrators(cast: NamedContributor[] | undefined): string[] {
+    const narrators = this.namesFrom(cast?.filter((person) => person.label?.toLowerCase() === 'narrator'))
+    const rolesByName = new Map<string, Set<string>>()
+
+    for (const person of cast || []) {
+      const name = person.name?.trim()
+      const label = person.label?.trim()
+      if (!name || !label || label.toLowerCase() === 'narrator') continue
+
+      for (const role of this.splitRoleLabels(label)) {
+        const roles = rolesByName.get(name) ?? new Set<string>()
+        roles.add(role)
+        rolesByName.set(name, roles)
+      }
+    }
+
+    return narrators.map((name) => {
+      const roles = Array.from(rolesByName.get(name) || []).sort()
+      return roles.length > 0 ? `${name} (${roles.join(', ')})` : name
+    })
+  }
+
+  private extractNarratorTags(cast: NamedContributor[] | undefined): string[] {
+    const tags = new Set<string>()
+
+    for (const person of cast || []) {
+      const label = person.label?.trim()
+      if (!label || label.toLowerCase() === 'narrator') continue
+
+      for (const role of this.splitRoleLabels(label)) {
+        tags.add(role)
+      }
+    }
+
+    return [...tags].sort()
+  }
+
+  private splitRoleLabels(label: string): string[] {
+    return [...new Set(label.split('/').map((role) => role.trim()).filter(Boolean))]
+  }
+
   private appendContributors(description: string | null, releaseData: BigFinishReleaseData): string | null {
     const entries: string[] = []
     const add = (role: string, people: NamedContributor[] | undefined) => {
@@ -259,7 +326,12 @@ export default class BigFinishProvider extends BaseProvider {
   }
 
   private formatSeries(series: string | null | undefined): string | null {
-    return series ? series.replace(/\s*:\s*/g, ' - ') : null
+    if (!series) return null
+  
+    const seriesMapping = getSeriesMapping()
+    const mappedSeries = seriesMapping[series.trim()] ?? series
+  
+    return mappedSeries.replace(/\s*:\s*/g, ' - ')
   }
 
   private escapeHtml(value: string): string {
@@ -309,8 +381,9 @@ export default class BigFinishProvider extends BaseProvider {
       description: data.about,
       cover: data.coverUrl,
       isbn: data.isbn,
+      tags: data.tags,
       series,
-      language: 'en',
+      language: 'Eng',
       publishedYear,
       publisher: 'Big Finish',
       duration

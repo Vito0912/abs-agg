@@ -22,6 +22,9 @@ RUN npm ci --omit=dev && \
 
 COPY --from=builder /app/dist ./dist
 
+# Copy the JSON into the runtime image
+COPY series-mapping.json /app/data/series-mapping.json
+
 RUN mkdir -p /app/data && chown -R node:node /app
 
 ENV NODE_ENV=production
