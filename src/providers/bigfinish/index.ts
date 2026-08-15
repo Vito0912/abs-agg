@@ -77,6 +77,7 @@ interface BigFinishReleaseData {
   image?: string
   about?: { summary?: string | null }
   written_by?: NamedContributor[]
+  contributors?: NamedContributor[]
   cast?: NamedContributor[]
   production_credits?: Record<string, NamedContributor[] | Record<string, unknown> | undefined>
 }
@@ -157,7 +158,9 @@ export default class BigFinishProvider extends BaseProvider {
     if (!releaseData) return null
 
     const titleParts = this.extractTitleParts(releaseData.title || hit.name)
-    const narrators = this.namesFrom(releaseData.cast?.filter((person) => person.label?.toLowerCase() === 'narrator'))
+    const castNarrators = releaseData.cast?.filter((person) => person.label?.toLowerCase() === 'narrator') || []
+    const contributors = releaseData.contributors?.length ? releaseData.contributors : hit.contributors || []
+    const narrators = this.namesFrom([...contributors, ...castNarrators])
     const authors = this.namesFrom(releaseData.written_by)
     const technicalDetails = releaseData.production_credits?.technical_details as Record<string, unknown> | undefined
     const duration =
