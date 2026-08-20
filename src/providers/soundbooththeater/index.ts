@@ -119,32 +119,45 @@ export default class SoundboothTheaterProvider extends BaseProvider {
     }
 
     if (description) {
-      metadata.description = description
+      metadata.description = description.split('©', 2)[0]?.trim()
+      metadata.publisher = '©' + description.split('©', 2)[1]?.replace(/<[^>]*>/g, '').trim()
     }
 
     const author = $('.summary h3 a').text().trim()
     if (author) {
       metadata.author = author
     }
-
+    let allNarrators: string[] = []
     $('ul.audiobook-meta li').each((_, el) => {
       const text = $(el).text()
       const label = $(el).find('span').text().trim().toLowerCase().replace(':', '')
 
-      if (label === 'narration') {
+      if (label === 'narration'|| label === 'featuring') {
         const narrators = $(el)
           .find('a')
           .map((_, a) => $(a).text().trim())
           .get()
         if (narrators.length > 0) {
-          metadata.narrator = narrators.join(', ')
+          allNarrators = [...allNarrators, ...narrators]
         } else {
-          metadata.narrator = text.replace('Narration:', '').trim()
+          const narratorText = text.replace('Narration:', '').trim()
+          if (narratorText) {
+            allNarrators.push(narratorText)
+          }
         }
       } else if (label === 'length') {
         const durationText = text.replace('Length:', '').trim()
         metadata.duration = this.parseDuration(durationText)
+      } else if (label === 'genres') {
+          const genres  = $(el)
+          .find('a')
+          .map((_, a) => $(a).text().trim())
+          .get()
+          if (genres.length > 0) {
+            metadata.genres = genres
+          }
       }
+      metadata.narrator = allNarrators.join(', ') || undefined
     })
 
     const jsonLdScript = $('script.yoast-schema-graph').html()
@@ -165,7 +178,7 @@ export default class SoundboothTheaterProvider extends BaseProvider {
       .map((_, el) => $(el).text().trim())
       .get()
     if (genres.length > 0) {
-      metadata.genres = genres
+      metadata.genres = [...(metadata.genres || []), ...genres]
     }
 
     return metadata
@@ -184,6 +197,38 @@ export default class SoundboothTheaterProvider extends BaseProvider {
     return totalSeconds > 0 ? Math.round(totalSeconds / 60) : undefined
   }
 
+  private parseCoverImage(coverEl: cheerio.Cheerio<any> | null | undefined ): string | undefined {
+    if (!coverEl || coverEl.length === 0) return undefined
+
+    const src = coverEl.attr('src')
+    const srcset = coverEl.attr('srcset') || ''
+
+    if (srcset) {
+      const candidates = srcset
+        .split(',')
+        .map(s => s.trim())
+        .map(entry => {
+          const parts = entry.split(' ')
+          if (parts.length === 0) return null
+          const url = parts[0].trim()
+          if (!url) return null
+          const sizeToken = parts[parts.length - 1].trim()
+          if (!sizeToken) return null
+          const width = typeof sizeToken === 'string' ? parseInt(sizeToken.replace('w', ''), 10) : NaN
+          return { url, width: isNaN(width) ? 0 : width }
+        })
+        .filter(Boolean) as Array<{ url: string; width: number }>
+
+      if (candidates.length > 0) {
+        candidates.sort((a, b) => (b.width || 0) - (a.width || 0))
+        return candidates[0].url
+      }
+    }
+
+    if (src) return src
+    return undefined
+  }
+
   private parseSearchResponse(html: string): BookMetadata[] {
     const $ = cheerio.load(html)
     const results: BookMetadata[] = []
@@ -196,7 +241,7 @@ export default class SoundboothTheaterProvider extends BaseProvider {
 
       const titleText = titleEl.text().trim()
       const href = link.attr('href')
-      const cover = imgEl.attr('src')
+      const cover = this.parseCoverImage(imgEl)
 
       if (!titleText || !href) return
 
