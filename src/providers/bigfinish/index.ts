@@ -12,10 +12,6 @@ const config: ProviderConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
 const BASE_URL = 'https://www.bigfinish.com'
 const SEARCH_URL = `${BASE_URL}/api/search`
 
-const isEnvEnabled = (value: string | undefined): boolean => value?.trim().toLowerCase() === 'true'
-const ENABLE_SERIES_MAPPING = isEnvEnabled(process.env.seriesmapping)
-const ENABLE_CHARACTERS = isEnvEnabled(process.env.characters)
-
 const SEARCH_HEADERS = {
   'User-Agent':
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -71,7 +67,7 @@ interface BigFinishSearchResponse {
 }
 
 interface ParsedBookData {
-  schemaVersion: 3
+  schemaVersion: 6
   url: string
   title: string | null
   series: string | null
@@ -99,6 +95,7 @@ interface BigFinishReleaseData {
   image?: string
   about?: { summary?: string | null }
   written_by?: NamedContributor[]
+  contributors?: NamedContributor[]
   cast?: NamedContributor[]
   production_credits?: Record<string, NamedContributor[] | Record<string, unknown> | undefined>
 }
@@ -116,6 +113,8 @@ export default class BigFinishProvider extends BaseProvider {
   ): Promise<BookMetadata[]> {
     const limit = Math.min((params.limit as number) || 3, 5)
     const skipCache = options?.skipCache === true
+    const enableSeriesMapping = this.isEnabledParam(params.seriesmapping)
+    const enableCharacters = this.isEnabledParam(params.characters)
 
     const query = title.replace(/:/g, ' ')
 
@@ -142,7 +141,7 @@ export default class BigFinishProvider extends BaseProvider {
         if (bookCache) {
           try {
             const cachedData = JSON.parse(bookCache) as ParsedBookData
-            if (cachedData.schemaVersion === 3) bookData = cachedData
+            if (cachedData.schemaVersion === 6) bookData = cachedData
           } catch {}
         }
       }
@@ -155,7 +154,7 @@ export default class BigFinishProvider extends BaseProvider {
 
         if (pageRes.status === 200) {
           const rsc = typeof pageRes.data === 'string' ? pageRes.data : String(pageRes.data)
-          bookData = this.parseProductPage(productUrl, rsc, hit)
+          bookData = this.parseProductPage(productUrl, rsc, hit, enableSeriesMapping, enableCharacters)
 
           if (bookData && !skipCache) {
             dbManager.setBookCache(this.config.id, productUrl, JSON.stringify(bookData))
@@ -174,14 +173,23 @@ export default class BigFinishProvider extends BaseProvider {
     return books
   }
 
-  private parseProductPage(url: string, rsc: string, hit: BigFinishSearchResult): ParsedBookData | null {
+  private parseProductPage(
+    url: string,
+    rsc: string,
+    hit: BigFinishSearchResult,
+    enableSeriesMapping: boolean,
+    enableCharacters: boolean
+  ): ParsedBookData | null {
     const releaseData = this.extractReleaseData(rsc)
     if (!releaseData) return null
 
     const titleParts = this.extractTitleParts(releaseData.title || hit.name)
-    const narratorNames = this.namesFrom(releaseData.cast?.filter((person) => person.label?.toLowerCase() === 'narrator'))
-    const narrators = ENABLE_CHARACTERS ? this.formatNarrators(releaseData.cast) : narratorNames
-    const narratorTags = ENABLE_CHARACTERS ? this.extractNarratorTags(releaseData.cast) : []
+    const narratorNames = this.namesFrom(releaseData.cast)
+      .concat(this.namesFrom(releaseData.contributors))
+      .concat(this.namesFrom(hit.contributors))
+    const uniqueNarratorNames = [...new Set(narratorNames)]
+    const narrators = enableCharacters ? this.formatNarrators(uniqueNarratorNames) : uniqueNarratorNames
+    const narratorTags = enableCharacters ? this.extractNarratorTags(releaseData.cast) : []
     const authors = this.namesFrom(releaseData.written_by)
     const technicalDetails = releaseData.production_credits?.technical_details as Record<string, unknown> | undefined
     const duration =
@@ -190,13 +198,13 @@ export default class BigFinishProvider extends BaseProvider {
       hit.duration
     const isbn = technicalDetails?.digital_retail_isbn || technicalDetails?.physical_retail_isbn
     const description = this.resolveRscText(rsc, releaseData.about?.summary) || hit.description || null
-    const about = ENABLE_CHARACTERS ? this.appendContributors(description, releaseData) : description
+    const about = enableCharacters ? this.appendContributors(description, releaseData) : description
 
     return {
-      schemaVersion: 3,
+      schemaVersion: 6,
       url,
       title: releaseData.title || hit.name || null,
-      series: ENABLE_SERIES_MAPPING ? this.formatSeries(releaseData.range || titleParts.series) : releaseData.range || titleParts.series,
+      series: enableSeriesMapping ? this.formatSeries(releaseData.range || titleParts.series) : releaseData.range || titleParts.series,
       seriesTag: releaseData.release_number ? String(releaseData.release_number) : titleParts.seriesTag,
       releaseDate: releaseData.release_date || null,
       about,
@@ -261,26 +269,8 @@ export default class BigFinishProvider extends BaseProvider {
     ]
   }
 
-  private formatNarrators(cast: NamedContributor[] | undefined): string[] {
-    const narrators = this.namesFrom(cast?.filter((person) => person.label?.toLowerCase() === 'narrator'))
-    const rolesByName = new Map<string, Set<string>>()
-
-    for (const person of cast || []) {
-      const name = person.name?.trim()
-      const label = person.label?.trim()
-      if (!name || !label || label.toLowerCase() === 'narrator') continue
-
-      for (const role of this.splitRoleLabels(label)) {
-        const roles = rolesByName.get(name) ?? new Set<string>()
-        roles.add(role)
-        rolesByName.set(name, roles)
-      }
-    }
-
-    return narrators.map((name) => {
-      const roles = Array.from(rolesByName.get(name) || []).sort()
-      return roles.length > 0 ? `${name} (${roles.join(', ')})` : name
-    })
+  private formatNarrators(names: string[]): string[] {
+    return names
   }
 
   private extractNarratorTags(cast: NamedContributor[] | undefined): string[] {
@@ -323,6 +313,13 @@ export default class BigFinishProvider extends BaseProvider {
 
   private formatRole(role: string): string {
     return role.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+  }
+
+  private isEnabledParam(value: unknown): boolean {
+    if (value === undefined || value === null) return false
+    if (typeof value === 'boolean') return value
+    if (typeof value === 'number') return value === 1
+    return String(value).trim().toLowerCase() === 'true'
   }
 
   private formatSeries(series: string | null | undefined): string | null {

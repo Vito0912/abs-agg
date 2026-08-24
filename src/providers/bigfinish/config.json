@@ -14,6 +14,24 @@
         "max": 5
       },
       "description": "Maximum number of results to return (default: 3, max: 5)"
+    },
+    {
+      "name": "seriesmapping",
+      "required": false,
+      "validation": {
+        "type": "enum",
+        "values": ["true", "false"]
+      },
+      "description": "Enable series name mapping and normalization (default: false)"
+    },
+    {
+      "name": "characters",
+      "required": false,
+      "validation": {
+        "type": "enum",
+        "values": ["true", "false"]
+      },
+      "description": "Enable character and contributor enrichment for narrator roles (default: false)"
     }
   ],
   "returnedFields": [
