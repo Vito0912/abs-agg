@@ -39,6 +39,7 @@ interface BigFinishSearchResult {
   duration: string | null
   image: string | null
   contributors: { name: string }[]
+  indexUid: string
 }
 
 interface BigFinishSearchResponse {
@@ -105,7 +106,7 @@ export default class BigFinishProvider extends BaseProvider {
     }
 
     const searchData = searchRes.data as BigFinishSearchResponse
-    const hits = (searchData.hits ?? []).slice(0, limit)
+    const hits = (searchData.hits.filter((hit) => hit.indexUid == 'audiobook_models') ?? []).slice(0, limit)
 
     const books: BookMetadata[] = []
 
