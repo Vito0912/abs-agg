@@ -159,7 +159,7 @@ export default class BigFinishProvider extends BaseProvider {
     if (!releaseData) return null
 
     const titleParts = this.extractTitleParts(releaseData.title || hit.name)
-    const castNarrators = releaseData.cast?.filter((person) => person.label?.toLowerCase() === 'narrator') || []
+    const castNarrators = releaseData.cast || []
     const contributors = releaseData.contributors?.length ? releaseData.contributors : hit.contributors || []
     const narrators = this.namesFrom([...contributors, ...castNarrators])
     const authors = this.namesFrom(releaseData.written_by)
