@@ -3,10 +3,12 @@ import express from 'express'
 import path from 'path'
 import { providerRegistry } from './providers/ProviderRegistry'
 import { router } from './routes'
+import { createAuthMiddleware } from './middleware/auth'
 
 const app = express()
 const PORT = process.env.PORT || 3000
 
+app.use(createAuthMiddleware())
 app.use(express.json())
 
 app.use('/', router)

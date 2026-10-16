@@ -64,6 +64,8 @@ https://provider.vito0912.de/ardaudiothek
 
 Under "Auth" use `abs`
 
+For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
+
 > The URL can be replaced by your own deployment. The hosted provider can break at any moment.
 
 ### Comments
@@ -122,6 +124,8 @@ https://provider.vito0912.de/audioteka/lang:pl
 ```
 
 Under "Auth" use `abs`
+
+For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
 
 > The URL can be replaced by your own deployment. The hosted provider can break at any moment.
 
@@ -216,6 +220,8 @@ https://provider.vito0912.de/bookbeat/market:austria
 ```
 
 Under "Auth" use `abs`
+
+For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
 
 > The URL can be replaced by your own deployment. The hosted provider can break at any moment.
 
@@ -350,6 +356,8 @@ https://provider.vito0912.de/goodreads
 
 Under "Auth" use `abs`
 
+For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
+
 > The URL can be replaced by your own deployment. The hosted provider can break at any moment.
 
 ### Comments
@@ -402,6 +410,8 @@ https://provider.vito0912.de/graphicaudio
 ```
 
 Under "Auth" use `abs`
+
+For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
 
 > The URL can be replaced by your own deployment. The hosted provider can break at any moment.
 
@@ -457,6 +467,8 @@ https://provider.vito0912.de/hardcover
 ```
 
 Under "Auth" use `abs`
+
+For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
 
 > The URL can be replaced by your own deployment. The hosted provider can break at any moment.
 
@@ -643,6 +655,8 @@ https://provider.vito0912.de/storytel/language:en
 ```
 
 Under "Auth" use `abs`
+
+For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
 
 > The URL can be replaced by your own deployment. The hosted provider can break at any moment.
 

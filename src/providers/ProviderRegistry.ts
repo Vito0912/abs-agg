@@ -28,6 +28,12 @@ export class ProviderRegistry {
   }
 
   public async loadProviders(providersDir: string): Promise<void> {
+    const allowedProviders = new Set(
+      (process.env.PROVIDER_WHITELIST || '')
+        .split(',')
+        .map((id) => id.trim())
+        .filter(Boolean)
+    )
     const providerDirs = fs.readdirSync(providersDir).filter((dir) => {
       const fullPath = path.join(providersDir, dir)
       return fs.statSync(fullPath).isDirectory()
@@ -54,6 +60,10 @@ export class ProviderRegistry {
       try {
         const configContent = fs.readFileSync(configPath, 'utf-8')
         const config = JSON.parse(configContent) as ProviderConfig
+
+        if (allowedProviders.size > 0 && !allowedProviders.has(config.id)) {
+          continue
+        }
 
         if (config.requiredEnv && config.requiredEnv.length > 0) {
           const missingEnvVars = config.requiredEnv.filter((envVar) => !process.env[envVar])

@@ -95,12 +95,14 @@ curl "http://localhost:3000/librivox/search?title=sherlock+holmes&author=doyle"
 
 Environment variables:
 
-| Variable              | Required | Description                      |
-| --------------------- | -------- | -------------------------------- |
-| `PORT`                | No       | Server port (default: 3000)      |
-| `HARDCOVER_TOKEN`     | No       | API token for Hardcover provider |
-| `GOODREADS_KEY`       | No       | API key for Goodreads provider   |
-| `DEEZER_ACCESS_TOKEN` | No       | Token for higher rate limits     |
+| Variable              | Required | Description                                                             |
+| --------------------- | -------- | ----------------------------------------------------------------------- |
+| `PORT`                | No       | Server port (default: 3000)                                             |
+| `AUTH_TOKEN`          | No       | Enables and uses value as authentication                                |
+| `PROVIDER_WHITELIST`  | No       | Comma-separated provider IDs to load (default: all available providers) |
+| `HARDCOVER_TOKEN`     | No       | API token for Hardcover provider                                        |
+| `GOODREADS_KEY`       | No       | API key for Goodreads provider                                          |
+| `DEEZER_ACCESS_TOKEN` | No       | Token for higher rate limits                                            |
 
 ## Contributing
 

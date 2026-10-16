@@ -109,6 +109,7 @@ function generateProviderSection(config: ProviderConfig): string {
       section += `https://provider.vito0912.de/${config.id}\n`
     }
     section += '```\n\nUnder "Auth" use `abs`\n\n'
+    section += 'For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.\n\n'
     section += '> The URL can be replaced by your own deployment. The hosted provider can break at any moment.\n\n'
   }
 

@@ -8,6 +8,8 @@ services:
       - '3000:3000'
     environment:
       - NODE_ENV=production
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+      - PROVIDER_WHITELIST=${PROVIDER_WHITELIST:-}
       - HARDCOVER_TOKEN=${HARDCOVER_TOKEN}
       # See https://lazylibrarian.gitlab.io/config_importing/
       - GOODREADS_API_KEY=${GOODREADS_API_KEY}
