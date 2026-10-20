@@ -19,27 +19,27 @@
   "license": "ISC",
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
-    "@types/dompurify": "^3.0.5",
-    "@types/express": "^5.0.3",
+    "@types/dompurify": "^3.2.0",
+    "@types/express": "^5.0.6",
     "@types/jsdom": "^27.0.0",
-    "@types/node": "^24.6.2",
-    "@typescript-eslint/eslint-plugin": "^8.45.0",
-    "@typescript-eslint/parser": "^8.45.0",
-    "eslint": "^10.8.0",
+    "@types/node": "^24.19.2",
+    "@typescript-eslint/eslint-plugin": "^8.71.2",
+    "@typescript-eslint/parser": "^8.71.2",
+    "eslint": "^10.13.0",
     "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-prettier": "^5.5.4",
-    "prettier": "^3.6.2",
-    "tsx": "^4.20.6",
+    "eslint-plugin-prettier": "^5.5.7",
+    "prettier": "^3.9.10",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "axios": "^1.13.6",
-    "better-sqlite3": "^12.6.2",
+    "axios": "^1.20.0",
+    "better-sqlite3": "^12.11.1",
     "cheerio": "^1.2.0",
-    "dompurify": "^3.3.1",
-    "dotenv": "^17.3.1",
-    "express": "^5.2.1",
+    "dompurify": "^3.4.17",
+    "dotenv": "^17.4.2",
+    "express": "^5.3.0",
     "jsdom": "^28.1.0",
-    "zod": "^4.3.6"
+    "zod": "^4.6.7"
   }
 }
