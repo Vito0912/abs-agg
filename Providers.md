@@ -33,9 +33,9 @@ Total Providers: 14
 
 #### Optional Parameters
 
-| Name | Type | Validation | Description |
-|------|------|------------|-------------|
-| `limit` | int | 1-20 | Maximum number of results to return (default: 5, max: 20) |
+| Name         | Type | Validation            | Description                                                                                                                                               |
+| ------------ | ---- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `limit`      | int  | 1-20                  | Maximum number of results to return (default: 5, max: 20)                                                                                                 |
 | `searchType` | enum | [search, programsets] | Search type: 'search' (default) for general search (preferred for single items) or 'programsets' for program set specific search (preferred for podcasts) |
 
 ### Returned Fields
@@ -87,15 +87,15 @@ For deployments with authentication enabled, use the configured `AUTH_TOKEN` ins
 
 #### Required Parameters
 
-| Name | Type | Validation | Description |
-|------|------|------------|-------------|
+| Name   | Type | Validation           | Description                                                                              |
+| ------ | ---- | -------------------- | ---------------------------------------------------------------------------------------- |
 | `lang` | enum | [pl, cz, de, sk, lt] | Language/region code: pl (Polish), cz (Czech), de (German), sk (Slovak), lt (Lithuanian) |
 
 #### Optional Parameters
 
-| Name | Type | Validation | Description |
-|------|------|------------|-------------|
-| `limit` | int | 1-20 | Maximum number of results to return (default: 5, max: 20) |
+| Name    | Type | Validation | Description                                               |
+| ------- | ---- | ---------- | --------------------------------------------------------- |
+| `limit` | int  | 1-20       | Maximum number of results to return (default: 5, max: 20) |
 
 ### Returned Fields
 
@@ -147,9 +147,9 @@ For deployments with authentication enabled, use the configured `AUTH_TOKEN` ins
 
 #### Optional Parameters
 
-| Name | Type | Validation | Description |
-|------|------|------------|-------------|
-| `limit` | int | 1-5 | Maximum number of results to return (default: 3, max: 5) |
+| Name    | Type | Validation | Description                                              |
+| ------- | ---- | ---------- | -------------------------------------------------------- |
+| `limit` | int  | 1-5        | Maximum number of results to return (default: 3, max: 5) |
 
 ### Returned Fields
 
@@ -185,15 +185,15 @@ GET /bigfinish/search?title=example&author=author
 
 #### Required Parameters
 
-| Name | Type | Validation | Description |
-|------|------|------------|-------------|
+| Name     | Type | Validation                                                                                                                                                                                                                                                                                | Description                                     |
+| -------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
 | `market` | enum | [austria, belgium, bulgaria, croatia, cyprus, czechia, denmark, estonia, finland, france, germany, greece, hungary, ireland, italy, latvia, lithuania, luxembourg, malta, netherlands, norway, poland, portugal, romania, slovakia, slovenia, spain, sweden, switzerland, united-kingdom] | Market/country for the search (BookBeat region) |
 
 #### Optional Parameters
 
-| Name | Type | Validation | Description |
-|------|------|------------|-------------|
-| `includeErotic` | enum | [true, false] | Whether to include erotic books (default: false) |
+| Name                   | Type | Validation    | Description                                                                                          |
+| ---------------------- | ---- | ------------- | ---------------------------------------------------------------------------------------------------- |
+| `includeErotic`        | enum | [true, false] | Whether to include erotic books (default: false)                                                     |
 | `includeHighResCovers` | enum | [true, false] | Whether to include high resolution covers. This highly increases cover loading time (default: false) |
 
 ### Returned Fields
@@ -244,9 +244,9 @@ For deployments with authentication enabled, use the configured `AUTH_TOKEN` ins
 
 #### Optional Parameters
 
-| Name | Type | Validation | Description |
-|------|------|------------|-------------|
-| `limit` | int | 1-10 | Maximum number of results to return (default: 5, max: 10) |
+| Name    | Type | Validation | Description                                               |
+| ------- | ---- | ---------- | --------------------------------------------------------- |
+| `limit` | int  | 1-10       | Maximum number of results to return (default: 5, max: 10) |
 
 ### Returned Fields
 
@@ -282,9 +282,9 @@ GET /deezer/search?title=example&author=author
 
 #### Optional Parameters
 
-| Name | Type | Validation | Description |
-|------|------|------------|-------------|
-| `limit` | int | 1-5 | Maximum number of results to return (default: 5, max: 5) |
+| Name    | Type | Validation | Description                                              |
+| ------- | ---- | ---------- | -------------------------------------------------------- |
+| `limit` | int  | 1-5        | Maximum number of results to return (default: 5, max: 5) |
 
 ### Returned Fields
 
@@ -324,9 +324,9 @@ GET /dreifragezeichen/search?title=example&author=author
 
 #### Optional Parameters
 
-| Name | Type | Validation | Description |
-|------|------|------------|-------------|
-| `limit` | int | 1-20 | Maximum number of results to return (default: 10, max: 20) |
+| Name    | Type | Validation | Description                                                |
+| ------- | ---- | ---------- | ---------------------------------------------------------- |
+| `limit` | int  | 1-20       | Maximum number of results to return (default: 10, max: 20) |
 
 ### Returned Fields
 
@@ -379,9 +379,9 @@ For deployments with authentication enabled, use the configured `AUTH_TOKEN` ins
 
 #### Optional Parameters
 
-| Name | Type | Validation | Description |
-|------|------|------------|-------------|
-| `limit` | int | 1-20 | Maximum number of results to return (default: 10, max: 20) |
+| Name    | Type | Validation | Description                                                |
+| ------- | ---- | ---------- | ---------------------------------------------------------- |
+| `limit` | int  | 1-20       | Maximum number of results to return (default: 10, max: 20) |
 
 ### Returned Fields
 
@@ -433,10 +433,10 @@ For deployments with authentication enabled, use the configured `AUTH_TOKEN` ins
 
 #### Optional Parameters
 
-| Name | Type | Validation | Description |
-|------|------|------------|-------------|
-| `language` | string | - | Filter by language code (e.g., 'en', 'de') |
-| `limit` | int | 1-25 | Maximum number of results to return (default: 10, max: 25) |
+| Name       | Type   | Validation | Description                                                |
+| ---------- | ------ | ---------- | ---------------------------------------------------------- |
+| `language` | string | -          | Filter by language code (e.g., 'en', 'de')                 |
+| `limit`    | int    | 1-25       | Maximum number of results to return (default: 10, max: 25) |
 
 ### Returned Fields
 
@@ -490,21 +490,23 @@ For deployments with authentication enabled, use the configured `AUTH_TOKEN` ins
 
 #### Optional Parameters
 
-| Name | Type | Validation | Description |
-|------|------|------------|-------------|
-| `genre` | string | - | Filter results by genre (e.g., 'Fiction', 'Science Fiction', 'Poetry') |
-| `limit` | int | 1-20 | Maximum number of results to return (default: 10, max: 20) |
+| Name    | Type   | Validation | Description                                                            |
+| ------- | ------ | ---------- | ---------------------------------------------------------------------- |
+| `genre` | string | -          | Filter results by genre (e.g., 'Fiction', 'Science Fiction', 'Poetry') |
+| `limit` | int    | 1-20       | Maximum number of results to return (default: 10, max: 20)             |
 
 ### Returned Fields
 
 - `title`
 - `author`
+- `narrator`
 - `description`
 - `cover`
 - `genres`
 - `language`
 - `duration`
 - `publishedYear`
+- `bookId`
 
 ### Example Request
 
@@ -514,7 +516,7 @@ GET /librivox/search?title=example&author=author
 
 ### Comments
 
-- Use ^ prefix in title/author to anchor search to beginning of term
+- Use ^ prefix in title/author/genre to anchor search to beginning of term
 
 ---
 
@@ -530,12 +532,12 @@ GET /librivox/search?title=example&author=author
 
 #### Optional Parameters
 
-| Name | Type | Validation | Description |
-|------|------|------------|-------------|
-| `limit` | int | 1-6 | Maximum results to return |
-| `searchby` | enum | [all, titles, authors] | Field to search by (titles or authors). If not specified, defaults to searching by all. |
-| `lang` | enum | [all, cmn, bas, gem, ger, gsw, hai, yue, cpf, afr, alb, amh, ara, arm, asm, aze, baq, bel, ben, bos, bul, cat, chi, cze, dan, dut, eng, est, fin, fre, geo, gle, glg, gre, guj, hat, heb, hin, hrv, hun, ice, ind, ita, jav, jpn, kan, kaz, kir, kor, kur, lat, lav, lit, ltz, lug, mac, mal, mao, mar, may, mlg, mlt, nep, nno, nob, nor, oci, ori, pan, per, pol, por, rum, rus, san, sin, slo, slv, som, spa, srp, swa, swe, tam, tel, tgk, tgl, tha, tur, twi, ukr, urd, uzb, vie, yor, zha, zul] | Language of the audiobook searched for. If not specified, defaults to all (search in all languages). |
-| `ai_narrated` | enum | [true, false] | Whether to include AI-narrated audiobooks. Default is false. |
+| Name          | Type | Validation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Description                                                                                          |
+| ------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `limit`       | int  | 1-6                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Maximum results to return                                                                            |
+| `searchby`    | enum | [all, titles, authors]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Field to search by (titles or authors). If not specified, defaults to searching by all.              |
+| `lang`        | enum | [all, cmn, bas, gem, ger, gsw, hai, yue, cpf, afr, alb, amh, ara, arm, asm, aze, baq, bel, ben, bos, bul, cat, chi, cze, dan, dut, eng, est, fin, fre, geo, gle, glg, gre, guj, hat, heb, hin, hrv, hun, ice, ind, ita, jav, jpn, kan, kaz, kir, kor, kur, lat, lav, lit, ltz, lug, mac, mal, mao, mar, may, mlg, mlt, nep, nno, nob, nor, oci, ori, pan, per, pol, por, rum, rus, san, sin, slo, slv, som, spa, srp, swa, swe, tam, tel, tgk, tgl, tha, tur, twi, ukr, urd, uzb, vie, yor, zha, zul] | Language of the audiobook searched for. If not specified, defaults to all (search in all languages). |
+| `ai_narrated` | enum | [true, false]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Whether to include AI-narrated audiobooks. Default is false.                                         |
 
 ### Returned Fields
 
@@ -615,16 +617,16 @@ GET /soundbooththeater/search?title=example&author=author
 
 #### Required Parameters
 
-| Name | Type | Validation | Description |
-|------|------|------------|-------------|
+| Name       | Type | Validation                                                                       | Description                                        |
+| ---------- | ---- | -------------------------------------------------------------------------------- | -------------------------------------------------- |
 | `language` | enum | [en, sv, no, dk, fi, is, de, es, fr, it, pl, nl, pt, bg, tr, ru, ar, hi, id, th] | Language/locale for the search (ISO language code) |
 
 #### Optional Parameters
 
-| Name | Type | Validation | Description |
-|------|------|------------|-------------|
-| `limit` | int | 1-10 | Maximum number of results to return (default: 3, max: 10) |
-| `type` | enum | [audiobook, ebook, all] | Type of content to search for (default: all) |
+| Name    | Type | Validation              | Description                                               |
+| ------- | ---- | ----------------------- | --------------------------------------------------------- |
+| `limit` | int  | 1-10                    | Maximum number of results to return (default: 3, max: 10) |
+| `type`  | enum | [audiobook, ebook, all] | Type of content to search for (default: all)              |
 
 ### Returned Fields
 
@@ -678,9 +680,9 @@ For deployments with authentication enabled, use the configured `AUTH_TOKEN` ins
 
 #### Optional Parameters
 
-| Name | Type | Validation | Description |
-|------|------|------------|-------------|
-| `limit` | int | 1-5 | Maximum number of results to return (default: 3, max: 5) |
+| Name    | Type | Validation | Description                                              |
+| ------- | ---- | ---------- | -------------------------------------------------------- |
+| `limit` | int  | 1-5        | Maximum number of results to return (default: 3, max: 5) |
 
 ### Returned Fields
 

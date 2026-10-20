@@ -24,6 +24,19 @@
       "description": "Maximum number of results to return (default: 10, max: 20)"
     }
   ],
-  "returnedFields": ["title", "author", "description", "cover", "genres", "language", "duration", "publishedYear"],
-  "comments": ["Use ^ prefix in title/author to anchor search to beginning of term"]
+  "returnedFields": [
+    "title",
+    "author",
+    "narrator",
+    "description",
+    "cover",
+    "genres",
+    "language",
+    "duration",
+    "publishedYear",
+    "bookId"
+  ],
+  "comments": [
+    "Use ^ prefix in title/author/genre to anchor search to beginning of term"
+  ]
 }
