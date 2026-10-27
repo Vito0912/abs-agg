@@ -1,0 +1,31 @@
+{
+  "id": "elevenreader",
+  "name": "ElevenReader",
+  "available": true,
+  "addToAudiobookshelf": true,
+  "description": "Fetches audiobook metadata from ElevenReader's public search and details APIs.",
+  "url": "https://elevenreader.io/",
+  "parameters": [
+    {
+      "name": "limit",
+      "required": false,
+      "validation": { "type": "int", "min": 1, "max": 10 },
+      "description": "Maximum books from the first search page to fetch details for (default: 3)"
+    }
+  ],
+  "returnedFields": [
+    "title",
+    "subtitle",
+    "author",
+    "narrator",
+    "publishedYear",
+    "description",
+    "cover",
+    "bookId",
+    "genres",
+    "language",
+    "duration",
+    "poweredBy"
+  ],
+  "comments": []
+}

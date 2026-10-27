@@ -1,6 +1,6 @@
 # Metadata Providers
 
-Total Providers: 14
+Total Providers: 15
 
 ## Table of Contents
 
@@ -10,6 +10,7 @@ Total Providers: 14
 - [BookBeat](#bookbeat)
 - [Deezer](#deezer)
 - [Die drei ???](#dreifragezeichen)
+- [ElevenReader](#elevenreader)
 - [Goodreads](#goodreads)
 - [Graphic Audio](#graphicaudio)
 - [Hardcover](#hardcover)
@@ -309,6 +310,57 @@ GET /dreifragezeichen/search?title=example&author=author
 
 - Data provided by https://dreimetadaten.de
 - Does include the main series, some specials and kids series
+
+---
+
+## ElevenReader
+
+**ID:** `elevenreader`
+
+**Description:** Fetches audiobook metadata from ElevenReader's public search and details APIs.
+
+**Metadata-URL:** [https://elevenreader.io/](https://elevenreader.io/)
+
+### Parameters
+
+#### Optional Parameters
+
+| Name | Type | Validation | Description |
+|------|------|------------|-------------|
+| `limit` | int | 1-10 | Maximum books from the first search page to fetch details for (default: 3) |
+
+### Returned Fields
+
+- `title`
+- `subtitle`
+- `author`
+- `narrator`
+- `publishedYear`
+- `description`
+- `cover`
+- `bookId`
+- `genres`
+- `language`
+- `duration`
+- `poweredBy`
+
+### Example Request
+
+```
+GET /elevenreader/search?title=example&author=author
+```
+
+### Add to Audiobookshelf
+
+```
+https://provider.vito0912.de/elevenreader
+```
+
+Under "Auth" use `abs`
+
+For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
+
+> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
 
 ---
 
