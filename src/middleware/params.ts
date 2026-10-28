@@ -1,11 +1,11 @@
-import { Request, Response, NextFunction } from 'express'
+import type { Request, Response, NextFunction } from 'express'
 import { providerRegistry } from '../providers/ProviderRegistry'
 import { ParameterValidator } from '../utils/validator'
-import { ParsedParameters } from '../types'
+import type { ParsedParameters } from '../types'
 
 export function parseProviderParams(req: Request, res: Response, next: NextFunction): void {
   const { providerId, params } = req.params
-  const provider = providerRegistry.get(providerId as string)
+  const provider = providerRegistry.get(typeof providerId === 'string' ? providerId : '')
 
   if (!provider) {
     res.status(404).json({ error: `Provider not found: ${providerId}` })
@@ -14,23 +14,25 @@ export function parseProviderParams(req: Request, res: Response, next: NextFunct
 
   const config = provider.getConfig()
   const parsedParams: ParsedParameters = {}
-  const paramString: string[] = (params as unknown as string[]) || []
+  const paramString = Array.isArray(params) ? params : []
 
-  console.log('Parameter string:', paramString)
+  const paramPairs: { name: string; value: string }[] = []
+  for (const segment of paramString) {
+    const colonIndex = segment.indexOf(':')
+    if (colonIndex <= 0 || colonIndex === segment.length - 1) {
+      res.status(400).json({ error: `Invalid provider parameter: ${segment}` })
+      return
+    }
 
-  const paramPairs = paramString
-    .filter((p) => p.length > 0)
-    .map((p) => {
-      const colonIndex = p.indexOf(':')
-      if (colonIndex === -1) {
-        return null
-      }
-      return {
-        name: p.substring(0, colonIndex),
-        value: p.substring(colonIndex + 1)
-      }
-    })
-    .filter((p): p is { name: string; value: string } => p !== null)
+    const name = segment.slice(0, colonIndex)
+    const value = segment.slice(colonIndex + 1)
+    if (paramPairs.some((parameter) => parameter.name === name)) {
+      res.status(400).json({ error: `Duplicate provider parameter: ${name}` })
+      return
+    }
+
+    paramPairs.push({ name, value })
+  }
 
   const providedParamNames = new Set(paramPairs.map((p) => p.name))
 
@@ -38,7 +40,10 @@ export function parseProviderParams(req: Request, res: Response, next: NextFunct
     const paramPair = paramPairs.find((p) => p.name === paramDef.name)
 
     if (!paramPair) {
-      if (paramDef.required) {
+      if (paramDef.default !== undefined) {
+        const validation = ParameterValidator.validate(String(paramDef.default), paramDef.validation)
+        if (validation.parsedValue !== undefined) parsedParams[paramDef.name] = validation.parsedValue
+      } else if (paramDef.required) {
         res.status(400).json({
           error: `Missing required parameter: ${paramDef.name}`
         })
@@ -56,7 +61,9 @@ export function parseProviderParams(req: Request, res: Response, next: NextFunct
       return
     }
 
-    parsedParams[paramDef.name] = validation.parsedValue!
+    if (validation.parsedValue !== undefined) {
+      parsedParams[paramDef.name] = validation.parsedValue
+    }
   }
 
   const validParamNames = new Set(config.parameters.map((p) => p.name))

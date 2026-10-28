@@ -1,33 +1,23 @@
-import { BaseProvider } from '../BaseProvider'
-import { BookMetadata, ParsedParameters, ProviderConfig } from '../../types'
-import path from 'path'
-import fs from 'fs'
-import { ThaliaResponse, ThaliaSearchResult } from './types'
+import type { BookMetadata, ParsedParameters, ProviderConfig } from '../../types'
+import { normalizeBookMetadata } from '../../utils/helpers'
 import { httpClient } from '../../utils/httpClient'
-
-const configPath = path.join(__dirname, 'config.json')
-const config: ProviderConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+import { BaseProvider } from '../BaseProvider'
+import { thaliaResponseSchema } from './schemas'
+import type { ThaliaSearchResult } from './types'
 
 export default class ThaliaProvider extends BaseProvider {
-  constructor() {
+  constructor(config: ProviderConfig) {
     super(config)
   }
 
-  async search(
-    title: string,
-    _author: string | null,
-    params: ParsedParameters,
-    _options?: { skipCache?: boolean }
-  ): Promise<BookMetadata[]> {
-    const limit = Math.min((params.limit as number) || 5, 30)
+  async searchBooks(title: string, _author: string | null, params: ParsedParameters): Promise<BookMetadata[]> {
+    const limit = Math.min(Number(params.limit) || 5, 30)
 
     const searchUrl = `https://app.thalia.de/api/rest/suche/v5/?suchbegriff=${encodeURIComponent(title.replace(/\s+/g, '+'))}&gewuenschteSeite=1&artikelServiceAufrufen=true&anzahlArtikelProSeite=${limit}`
 
-    console.log(searchUrl)
     const searchRes = await httpClient.get(searchUrl)
-    console.log(searchRes.status, searchRes.data)
     if (searchRes.status !== 200) throw new Error('Thalia search API error')
-    const searchJson = searchRes.data as ThaliaResponse
+    const searchJson = thaliaResponseSchema.parse(searchRes.data)
     const searchResults = searchJson.artikelliste || []
 
     const audiobookFilter: string[] = ['Hörbuch', 'Hörspiel', 'Audiobook']
@@ -44,9 +34,7 @@ export default class ThaliaProvider extends BaseProvider {
           : true
       )
       .slice(0, limit)) {
-      console.log(result)
-
-      const metadata = this.mapThaliaToMetadata(result, params)
+      const metadata = this.mapThaliaToMetadata(result)
       if (metadata.title) {
         books.push(metadata)
       }
@@ -55,8 +43,23 @@ export default class ThaliaProvider extends BaseProvider {
     return books
   }
 
-  // @ts-ignore
-  private mapThaliaToMetadata(result: ThaliaSearchResult, params: ParsedParameters): BookMetadata {
-    return undefined as any
+  private mapThaliaToMetadata(result: ThaliaSearchResult): BookMetadata {
+    return normalizeBookMetadata({
+      title: result.titel,
+      bookId: result.identifier.matnr,
+      format: result.formatbezeichnung.includes('Hör') ? 'audiobook' : undefined,
+      author: result.personen
+        ?.filter((person) => person.typ === 'Autor')
+        .map((person) => person.name)
+        .join(', '),
+      narrator: result.personen
+        ?.filter((person) => person.typ === 'Sprecher')
+        .map((person) => person.name)
+        .join(', '),
+      isbn: result.identifier.isbn13 || result.identifier.isbn10,
+      cover: result.coverbild.gross?.uri,
+      publishedYear: result.erscheinungsdatum?.jahr,
+      series: result.serie ? [{ series: result.serie.name, sequence: result.serie.nummer }] : undefined
+    })
   }
 }

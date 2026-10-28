@@ -103,6 +103,12 @@ Environment variables:
 | `HARDCOVER_TOKEN`     | No       | API token for Hardcover provider                                        |
 | `GOODREADS_KEY`       | No       | API key for Goodreads provider                                          |
 | `DEEZER_ACCESS_TOKEN` | No       | Token for higher rate limits                                            |
+| `ENABLE_LOCAL_PROVIDER` | No | Enable the local catalog provider (default: false) |
+| `ENABLE_CROSS_PROVIDER_ENRICHMENT` | No | Fill missing descriptions from compatible stored metadata (default: false) |
+| `METADATA_DATABASE_PATH` | No | SQLite database path (default: ./data/metadata.sqlite) |
+| `CACHE_SEARCH_TTL_SECONDS` | No | Search freshness in seconds before jitter (default: 3600) |
+| `CACHE_DETAIL_TTL_SECONDS` | No | Detail freshness in seconds before jitter (default: 86400) |
+| `CACHE_NEGATIVE_TTL_SECONDS` | No | Empty or incomplete result freshness in seconds (default: 120) |
 
 ## Contributing
 

@@ -1,9 +1,13 @@
 {
   "id": "storytel",
   "name": "Storytel",
+  "provider": {
+    "name": "Storytel",
+    "url": "https://www.storytel.com/"
+  },
   "available": true,
-  "addToAudiobookshelf": true,
-  "description": "Fetches metadata from Storytel's public search API.",
+  "addToAudiobookshelf": false,
+  "description": "Fetches metadata from Storytel's public search API",
   "url": "https://www.storytel.com/",
   "parameters": [
     {
@@ -44,7 +48,8 @@
         "min": 1,
         "max": 10
       },
-      "description": "Maximum number of results to return (default: 3, max: 10)"
+      "description": "Maximum number of results to return",
+      "default": 3
     },
     {
       "name": "type",
@@ -53,7 +58,8 @@
         "type": "enum",
         "values": ["audiobook", "ebook", "all"]
       },
-      "description": "Type of content to search for (default: all)"
+      "description": "Type of content to search for",
+      "default": "all"
     }
   ],
   "returnedFields": [
@@ -71,5 +77,5 @@
     "duration",
     "tags"
   ],
-  "comments": ["Titles and series information are automatically cleaned using language-specific patterns."]
+  "comments": []
 }

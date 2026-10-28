@@ -1,33 +1,25 @@
-import { BaseProvider } from '../BaseProvider'
-import { SeriesMetadata, BookMetadata, ParsedParameters, ProviderConfig } from '../../types'
+import { mapConcurrent } from '../../utils/concurrency'
+import { markPartialResult } from '../../utils/requestContext'
+import type { BookMetadata, ParsedParameters, ProviderConfig, SeriesMetadata } from '../../types'
 import { normalizeBookMetadata } from '../../utils/helpers'
 import { httpClient } from '../../utils/httpClient'
-import { dbManager } from '../../database/manager'
-import fs from 'fs'
-import path from 'path'
-import { SearchApiResponse, DetailsApiResponse } from './types'
-
-const configPath = path.join(__dirname, 'config.json')
-const config: ProviderConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+import { BaseProvider } from '../BaseProvider'
+import { detailsApiResponseSchema, searchApiResponseSchema } from './schemas'
+import type { DetailsApiResponse, SearchApiResponse } from './types'
 
 export default class LibroFMProvider extends BaseProvider {
   private readonly searchApiUrl = 'https://libro.fm/api/v12/explore/search'
   private readonly detailsApiUrl = 'https://libro.fm/api/v12/explore/audiobook_details'
 
-  constructor() {
+  constructor(config: ProviderConfig) {
     super(config)
   }
 
-  public async search(
-    title: string,
-    author: string | null,
-    params: ParsedParameters,
-    options?: { skipCache?: boolean }
-  ): Promise<BookMetadata[]> {
-    const limit = (params['limit'] as number) || 3
-    const searchby = (params['searchby'] as string) || 'all'
-    const language = (params['lang'] as string) || 'all'
-    const aiNarrated = (params['ai_narrated'] as string) || 'false'
+  public async searchBooks(title: string, author: string | null, params: ParsedParameters): Promise<BookMetadata[]> {
+    const limit = Number(params.limit) || 3
+    const searchby = String(params.searchby || 'all')
+    const language = String(params.lang || 'all')
+    const aiNarrated = String(params.ai_narrated || 'false')
 
     this.validateParameters(title, author, limit, searchby, language, aiNarrated)
 
@@ -63,46 +55,29 @@ export default class LibroFMProvider extends BaseProvider {
       throw new Error(`Error while searching Libro.fm: ${searchRes.status}`)
     }
 
-    const searchData = searchRes.data
+    const searchData = searchApiResponseSchema.parse(searchRes.data)
     const audiobooks = searchData?.audiobook_collection?.audiobooks || []
     if (audiobooks.length === 0) {
       return []
     }
 
     const targetAudiobooks = audiobooks.slice(0, limit)
-    const allResults: BookMetadata[] = []
+    const results = await mapConcurrent(targetAudiobooks, 3, async (book) => {
+      if (!book.isbn) return null
 
-    for (const book of targetAudiobooks) {
       try {
-        if (!book.isbn) {
-          console.warn(`Audiobook has no ISBN: ${book.title}`)
-          continue
-        }
-        const details = await this.getBookById(String(book.isbn), options)
-        if (details) {
-          allResults.push(details)
-        }
+        return await this.getBookById(String(book.isbn), params)
       } catch (error) {
+        markPartialResult()
         console.error(`Failed to fetch details for ISBN ${book.isbn}:`, error)
+        return null
       }
-    }
+    })
 
-    return allResults
+    return results.filter((book): book is BookMetadata => book !== null)
   }
 
-  async getBookById(bookId: string, options?: { skipCache?: boolean }): Promise<BookMetadata | null> {
-    const skipCache = options?.skipCache || false
-    if (!skipCache) {
-      const cached = dbManager.getBookCache(this.config.id, bookId)
-      if (cached) {
-        try {
-          return JSON.parse(cached) as BookMetadata
-        } catch (e) {
-          console.error(`Failed to parse cached book ${bookId}:`, e)
-        }
-      }
-    }
-
+  async fetchBook(bookId: string, _params: ParsedParameters): Promise<BookMetadata | null> {
     const detailsUrl = `${this.detailsApiUrl}/${bookId}`
     console.log(`Fetching Libro.fm details from: ${detailsUrl}`)
 
@@ -114,7 +89,7 @@ export default class LibroFMProvider extends BaseProvider {
       throw new Error(`Error while fetching audiobook details from Libro.fm: ${detailsRes.status}`)
     }
 
-    const data = detailsRes.data?.data?.audiobook
+    const data = detailsApiResponseSchema.parse(detailsRes.data).data?.audiobook
     if (!data) {
       return null
     }
@@ -156,7 +131,6 @@ export default class LibroFMProvider extends BaseProvider {
 
     const language = data.audiobook_info?.audio_language_display || data.audiobook_info?.audio_language || undefined
     const durationSeconds = data.audiobook_info?.duration
-    const duration = durationSeconds ? Math.round(durationSeconds / 60) : undefined
 
     const metadata = normalizeBookMetadata({
       title,
@@ -171,11 +145,15 @@ export default class LibroFMProvider extends BaseProvider {
       genres: genres.length > 0 ? genres : undefined,
       series: seriesMetadata.length > 0 ? seriesMetadata : undefined,
       language,
-      duration,
+      durationSeconds,
+      format: 'audiobook',
+      contributors: [
+        ...authors.map((name) => ({ name, role: 'author' })),
+        ...narrators.map((name) => ({ name, role: 'narrator' }))
+      ],
       poweredBy: 'Libro.fm'
     })
     metadata.bookId = bookId
-    dbManager.setBookCache(this.config.id, bookId, JSON.stringify(metadata))
     return metadata
   }
 

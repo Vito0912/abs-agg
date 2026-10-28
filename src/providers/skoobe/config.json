@@ -1,0 +1,38 @@
+{
+  "id": "skoobe",
+  "name": "Skoobe",
+  "provider": { "name": "Skoobe", "url": "https://www.skoobe.de/" },
+  "available": true,
+  "addToAudiobookshelf": false,
+  "description": "Fetches ebook and audiobook metadata from Skoobe's public website",
+  "url": "https://www.skoobe.de/",
+  "parameters": [
+    {
+      "name": "limit",
+      "required": false,
+      "default": 3,
+      "validation": { "type": "int", "min": 1, "max": 6 },
+      "description": "Maximum number of results"
+    },
+    {
+      "name": "type",
+      "required": false,
+      "default": "all",
+      "validation": { "type": "enum", "values": ["all", "ebook", "audiobook"] },
+      "description": "Content format"
+    }
+  ],
+  "returnedFields": [
+    "title",
+    "subtitle",
+    "author",
+    "narrator",
+    "description",
+    "cover",
+    "language",
+    "publishedYear",
+    "publisher",
+    "duration"
+  ],
+  "comments": []
+}

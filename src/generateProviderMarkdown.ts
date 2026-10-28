@@ -1,6 +1,7 @@
+import { providerConfigSchema } from './types/config'
 import fs from 'fs'
 import path from 'path'
-import { ProviderConfig, ProviderParameter } from './types'
+import type { ProviderConfig, ProviderParameter } from './types'
 
 function generateProviderMarkdown(): void {
   const providersDir = path.join(__dirname, 'providers')
@@ -18,7 +19,7 @@ function generateProviderMarkdown(): void {
     if (fs.existsSync(configPath)) {
       try {
         const configContent = fs.readFileSync(configPath, 'utf-8')
-        const config = JSON.parse(configContent) as ProviderConfig
+        const config = providerConfigSchema.parse(JSON.parse(configContent))
         if (config.available !== false) configs.push(config)
       } catch (error) {
         console.error(`Failed to read config for ${dir}:`, error)
@@ -50,7 +51,13 @@ function generateProviderSection(config: ProviderConfig): string {
   let section = `## ${config.name}\n\n`
   section += `**ID:** \`${config.id}\`\n\n`
   section += `**Description:** ${config.description}\n\n`
-  section += `**Metadata-URL:** [${config.url}](${config.url})\n\n`
+  const source = config.provider
+  const sourceLabel = source.url ? `[${source.name}](${source.url})` : source.name
+  section += `**Metadata provider:** ${sourceLabel}\n\n`
+
+  if (config.credits?.length) {
+    section += `**Inspiration:** ${config.credits.map((credit) => `[Source](${credit.url})`).join(', ')}\n\n`
+  }
 
   section += '### Parameters\n\n'
 
@@ -59,20 +66,20 @@ function generateProviderSection(config: ProviderConfig): string {
 
   if (requiredParams.length > 0) {
     section += '#### Required Parameters\n\n'
-    section += '| Name | Type | Validation | Description |\n'
-    section += '|------|------|------------|-------------|\n'
+    section += '| Name | Type | Validation | Default | Description |\n'
+    section += '|------|------|------------|---------|-------------|\n'
     for (const param of requiredParams) {
-      section += `| \`${param.name}\` | ${param.validation.type} | ${formatValidation(param)} | ${param.description || '-'} |\n`
+      section += `| \`${param.name}\` | ${param.validation.type} | ${formatValidation(param)} | ${param.default ?? '-'} | ${param.description || '-'} |\n`
     }
     section += '\n'
   }
 
   if (optionalParams.length > 0) {
     section += '#### Optional Parameters\n\n'
-    section += '| Name | Type | Validation | Description |\n'
-    section += '|------|------|------------|-------------|\n'
+    section += '| Name | Type | Validation | Default | Description |\n'
+    section += '|------|------|------------|---------|-------------|\n'
     for (const param of optionalParams) {
-      section += `| \`${param.name}\` | ${param.validation.type} | ${formatValidation(param)} | ${param.description || '-'} |\n`
+      section += `| \`${param.name}\` | ${param.validation.type} | ${formatValidation(param)} | ${param.default ?? '-'} | ${param.description || '-'} |\n`
     }
     section += '\n'
   }

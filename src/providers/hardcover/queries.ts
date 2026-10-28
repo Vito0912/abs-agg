@@ -27,6 +27,7 @@ query GetBookDetails($ids: [Int!]!) {
     pages
     audio_seconds
     rating
+    ratings_count
     headline
     alternative_titles
     image {
@@ -56,6 +57,11 @@ query GetBookDetails($ids: [Int!]!) {
     default_audio_edition {
       id
       title
+      isbn_10
+      isbn_13
+      release_date
+      release_year
+      description
       asin
       audio_seconds
       publisher {
@@ -74,6 +80,8 @@ query GetBookDetails($ids: [Int!]!) {
       isbn_10
       isbn_13
       pages
+      image { url }
+      description
       publisher {
         name
       }
@@ -90,6 +98,13 @@ query GetBookDetails($ids: [Int!]!) {
     }
     editions(limit: 10) {
       id
+      reading_format_id
+      title
+      description
+      release_date
+      release_year
+      pages
+      image { url }
       isbn_10
       isbn_13
       asin

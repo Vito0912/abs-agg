@@ -1,6 +1,10 @@
 {
   "id": "example",
   "name": "Example Provider",
+  "provider": {
+    "name": "Example source",
+    "url": "https://example.com"
+  },
   "available": false,
   "description": "An example metadata provider that demonstrates the framework capabilities",
   "url": "https://example.com",
@@ -41,9 +45,5 @@
     "language",
     "duration"
   ],
-  "comments": [
-    "This is an example provider for demonstration purposes",
-    "It returns mock data and does not connect to a real API",
-    "Use this as a template for creating new providers"
-  ]
+  "comments": []
 }

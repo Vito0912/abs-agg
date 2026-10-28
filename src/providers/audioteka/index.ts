@@ -1,30 +1,20 @@
-import { BaseProvider } from '../BaseProvider'
-import { BookMetadata, ParsedParameters, ProviderConfig } from '../../types'
+import * as cheerio from 'cheerio'
+import type { BookMetadata, ParsedParameters, ProviderConfig } from '../../types'
 import { normalizeBookMetadata } from '../../utils/helpers'
 import { httpClient } from '../../utils/httpClient'
-import * as cheerio from 'cheerio'
-import path from 'path'
-import fs from 'fs'
+import { BaseProvider } from '../BaseProvider'
 
-import { AUDIOTEKA_LANGUAGES, AudiotekaSearchMatch, AudiotekaFullMetadata } from './types'
-import { parseSearchResults, parseBookDetails } from './utils'
-
-const configPath = path.join(__dirname, 'config.json')
-const config: ProviderConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+import { AUDIOTEKA_LANGUAGES, type AudiotekaFullMetadata, type AudiotekaSearchMatch } from './types'
+import { parseBookDetails, parseSearchResults } from './utils'
 
 export default class AudiotekaProvider extends BaseProvider {
-  constructor() {
+  constructor(config: ProviderConfig) {
     super(config)
   }
 
-  async search(
-    title: string,
-    _author: string | null,
-    params: ParsedParameters,
-    _options?: { skipCache?: boolean }
-  ): Promise<BookMetadata[]> {
-    const lang = params.lang as string
-    const limit = Math.min((params.limit as number) || 5, 20)
+  async searchBooks(title: string, _author: string | null, params: ParsedParameters): Promise<BookMetadata[]> {
+    const lang = String(params.lang)
+    const limit = Math.min(Number(params.limit) || 5, 20)
 
     const langConfig = AUDIOTEKA_LANGUAGES[lang]
     if (!langConfig) {
@@ -43,11 +33,10 @@ export default class AudiotekaProvider extends BaseProvider {
     })
 
     if (searchRes.status !== 200) {
-      console.warn(`Audioteka search returned status ${searchRes.status} for query: ${title}`)
-      return []
+      throw new Error(`Audioteka search error: ${searchRes.status}`)
     }
 
-    const $ = cheerio.load(searchRes.data as string)
+    const $ = cheerio.load(String(searchRes.data))
     const searchMatches = parseSearchResults($)
 
     const books: BookMetadata[] = []
@@ -55,9 +44,11 @@ export default class AudiotekaProvider extends BaseProvider {
 
     for (const match of limitedMatches) {
       try {
-        const fullMetadata = await this.fetchBookDetails(match, lang)
-        const metadata = this.mapToBookMetadata(fullMetadata)
-        if (metadata.title) {
+        const metadata = await this.cachedBook(match.url, params, async () => {
+          const fullMetadata = await this.fetchBookDetails(match, lang)
+          return this.mapToBookMetadata(fullMetadata)
+        })
+        if (metadata?.title) {
           books.push(metadata)
         }
       } catch (error) {
@@ -67,7 +58,7 @@ export default class AudiotekaProvider extends BaseProvider {
           language: langConfig.languageName
         })
         if (basicMetadata.title) {
-          books.push(basicMetadata)
+          books.push({ ...basicMetadata, quality: 'summary' })
         }
       }
     }
@@ -91,13 +82,16 @@ export default class AudiotekaProvider extends BaseProvider {
       throw new Error(`Failed to fetch book details: ${response.status}`)
     }
 
-    const $ = cheerio.load(response.data as string)
+    const $ = cheerio.load(String(response.data))
     return parseBookDetails($, match, langConfig)
   }
 
   private mapToBookMetadata(data: AudiotekaFullMetadata): BookMetadata {
     return normalizeBookMetadata({
       title: data.title,
+      bookId: data.url,
+      format: 'audiobook',
+      contributors: data.authors.map((name) => ({ name, role: 'author' })),
       author: data.authors.join(', '),
       narrator: data.narrator,
       publisher: data.publisher,

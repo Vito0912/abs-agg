@@ -1,4 +1,4 @@
-import { RequestHandler } from 'express'
+import type { RequestHandler } from 'express'
 
 export function createAuthMiddleware(token = process.env.AUTH_TOKEN): RequestHandler {
   return (req, res, next): void => {

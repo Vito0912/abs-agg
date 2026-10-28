@@ -1,10 +1,22 @@
 {
   "id": "soundbooththeater",
   "name": "Soundbooth Theater",
+  "provider": {
+    "name": "Soundbooth Theater",
+    "url": "https://soundbooththeater.com"
+  },
   "available": true,
-  "description": "Soundbooth Theater",
+  "description": "Audiobook metadata from Soundbooth Theater's public catalog",
   "url": "https://soundbooththeater.com",
-  "parameters": [],
+  "parameters": [
+    {
+      "name": "limit",
+      "required": false,
+      "default": 10,
+      "validation": { "type": "int", "min": 1, "max": 20 },
+      "description": "Maximum number of results"
+    }
+  ],
   "returnedFields": [
     "title",
     "series",
@@ -13,10 +25,11 @@
     "narrator",
     "description",
     "duration",
-    "publisher",
     "publishedYear",
     "genres",
-    "subtitle"
+    "isbn",
+    "language",
+    "tags"
   ],
-  "comments": ["The implementation of this provider is highly experimental and may not work reliably."]
+  "comments": []
 }

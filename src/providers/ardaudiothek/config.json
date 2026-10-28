@@ -1,9 +1,13 @@
 {
   "id": "ardaudiothek",
   "name": "ARD Audiothek",
+  "provider": {
+    "name": "ARD Audiothek",
+    "url": "https://www.ardaudiothek.de/"
+  },
   "available": true,
-  "addToAudiobookshelf": true,
-  "description": "Fetches audiobook metadata from the ARD Audiothek (public broadcasters in Germany).",
+  "addToAudiobookshelf": false,
+  "description": "Fetches audiobook metadata from the ARD Audiothek (public broadcasters in Germany)",
   "url": "https://www.ardaudiothek.de/",
   "parameters": [
     {
@@ -14,7 +18,8 @@
         "min": 1,
         "max": 20
       },
-      "description": "Maximum number of results to return (default: 5, max: 20)"
+      "description": "Maximum number of results to return",
+      "default": 5
     },
     {
       "name": "searchType",
@@ -23,12 +28,15 @@
         "type": "enum",
         "values": ["search", "programsets"]
       },
-      "description": "Search type: 'search' (default) for general search (preferred for single items) or 'programsets' for program set specific search (preferred for podcasts)"
+      "description": "Search type: 'search' for general search (preferred for single items) or 'programsets' for program set specific search (preferred for podcasts)",
+      "default": "search"
     }
   ],
   "returnedFields": ["title", "author", "description", "cover", "publisher", "genres", "tags", "series", "language"],
-  "comments": [
-    "German language only provider.",
-    "Credits https://github.com/h43lb1t0/ARD_Audiothek_provider for inital idea in Python"
+  "comments": ["Metadata is in German."],
+  "credits": [
+    {
+      "url": "https://github.com/h43lb1t0/ARD_Audiothek_provider"
+    }
   ]
 }

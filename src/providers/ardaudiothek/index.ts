@@ -1,36 +1,20 @@
-import { BaseProvider } from '../BaseProvider'
-import { BookMetadata, ParsedParameters, ProviderConfig } from '../../types'
+import type { BookMetadata, ParsedParameters, ProviderConfig } from '../../types'
 import { normalizeBookMetadata } from '../../utils/helpers'
 import { httpClient } from '../../utils/httpClient'
-import path from 'path'
-import fs from 'fs'
-import {
-  ArdProgramSet,
-  ArdProgramSetSearchResponse,
-  ArdSearchResponse,
-  ArdSearchType,
-  ArdSearchProgramSet,
-  ArdSearchItem
-} from './types'
-
-const configPath = path.join(__dirname, 'config.json')
-const config: ProviderConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+import { BaseProvider } from '../BaseProvider'
+import { ardProgramSetSearchResponseSchema, ardSearchResponseSchema } from './schemas'
+import type { ArdProgramSet, ArdSearchItem, ArdSearchProgramSet, ArdSearchResponse } from './types'
 
 const ARD_API_BASE = 'https://api.ardaudiothek.de'
 
 export default class ArdAudiothekProvider extends BaseProvider {
-  constructor() {
+  constructor(config: ProviderConfig) {
     super(config)
   }
 
-  async search(
-    title: string,
-    _author: string | null,
-    params: ParsedParameters,
-    _options?: { skipCache?: boolean }
-  ): Promise<BookMetadata[]> {
-    const limit = Math.min((params.limit as number) || 5, 20)
-    const searchType = (params.searchType as ArdSearchType) || 'search'
+  async searchBooks(title: string, _author: string | null, params: ParsedParameters): Promise<BookMetadata[]> {
+    const limit = Math.min(Number(params.limit) || 5, 20)
+    const searchType = params.searchType === 'programsets' ? 'programsets' : 'search'
 
     if (searchType === 'programsets') {
       return this.searchProgramSets(title, limit)
@@ -46,7 +30,7 @@ export default class ArdAudiothekProvider extends BaseProvider {
     if (searchRes.status !== 200) {
       throw new Error(`ARD Audiothek API error: ${searchRes.status}`)
     }
-    const searchJson = searchRes.data as ArdSearchResponse
+    const searchJson = ardSearchResponseSchema.parse(searchRes.data)
 
     return this.mapGeneralSearchResults(searchJson, limit)
   }
@@ -98,6 +82,8 @@ export default class ArdAudiothekProvider extends BaseProvider {
 
     return normalizeBookMetadata({
       title: cleanTitle,
+      bookId: item.id ? String(item.id) : undefined,
+      format: 'audiobook',
       author: authorName,
       description: item.synopsis,
       cover: imageUrl,
@@ -130,6 +116,8 @@ export default class ArdAudiothekProvider extends BaseProvider {
 
     return normalizeBookMetadata({
       title: cleanTitle,
+      bookId: item.id ? String(item.id) : undefined,
+      format: 'audiobook',
       author: authorName,
       description: item.synopsis,
       cover: imageUrl,
@@ -137,7 +125,7 @@ export default class ArdAudiothekProvider extends BaseProvider {
       genres: genres.length > 0 ? genres : undefined,
       tags: tags.length > 0 ? tags : undefined,
       series: series,
-      duration: item.duration,
+      durationSeconds: item.duration,
       language: 'de'
     })
   }
@@ -149,7 +137,7 @@ export default class ArdAudiothekProvider extends BaseProvider {
     if (searchRes.status !== 200) {
       throw new Error(`ARD Audiothek API error: ${searchRes.status}`)
     }
-    const searchJson = searchRes.data as ArdProgramSetSearchResponse
+    const searchJson = ardProgramSetSearchResponseSchema.parse(searchRes.data)
     const searchResults = searchJson.data?.search?.programSets?.nodes || []
 
     const books: BookMetadata[] = []
@@ -203,6 +191,8 @@ export default class ArdAudiothekProvider extends BaseProvider {
 
     return normalizeBookMetadata({
       title: cleanTitle,
+      bookId: item.id ? String(item.id) : undefined,
+      format: 'audiobook',
       author: authorName,
       description: description,
       cover: coverUrl,

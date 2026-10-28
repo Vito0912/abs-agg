@@ -1,4 +1,4 @@
-import { ValidationRule } from '../types'
+import type { ValidationRule } from '../types'
 
 export class ParameterValidator {
   static validate(
@@ -58,10 +58,10 @@ export class ParameterValidator {
     intOnly: boolean
   ): { valid: boolean; parsedValue?: number; error?: string } {
     const num = Number(value)
-    if (isNaN(num)) {
+    if (!Number.isFinite(num)) {
       return { valid: false, error: 'Value must be a number' }
     }
-    if (intOnly && !Number.isInteger(num)) {
+    if (intOnly && !Number.isSafeInteger(num)) {
       return { valid: false, error: 'Value must be an integer' }
     }
     if (rule.min !== undefined && num < rule.min) {

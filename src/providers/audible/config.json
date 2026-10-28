@@ -1,0 +1,52 @@
+{
+  "id": "audible",
+  "name": "Audible",
+  "provider": {
+    "name": "Audible",
+    "url": "https://www.audible.com/"
+  },
+  "available": true,
+  "addToAudiobookshelf": false,
+  "description": "Audiobook metadata from Audible's public catalog, with marketplace-specific identifiers and ratings",
+  "url": "https://www.audible.com/",
+  "parameters": [
+    {
+      "name": "region",
+      "required": false,
+      "validation": {
+        "type": "enum",
+        "values": ["us", "uk", "de", "fr", "ca", "au", "it", "es", "in", "jp", "br"]
+      },
+      "description": "Audible marketplace",
+      "default": "us"
+    },
+    {
+      "name": "limit",
+      "required": false,
+      "validation": {
+        "type": "int",
+        "min": 1,
+        "max": 20
+      },
+      "description": "Maximum results",
+      "default": 5
+    }
+  ],
+  "returnedFields": [
+    "title",
+    "subtitle",
+    "author",
+    "narrator",
+    "description",
+    "cover",
+    "asin",
+    "isbn",
+    "publisher",
+    "publishedYear",
+    "language",
+    "duration",
+    "genres",
+    "series"
+  ],
+  "comments": []
+}

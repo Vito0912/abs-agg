@@ -1,20 +1,153 @@
-import axios, { AxiosInstance } from 'axios'
+import axios from 'axios'
+import type { AxiosRequestConfig, AxiosResponse } from 'axios'
+import { remainingRequestMs } from './requestContext'
+import { setTimeout as delay } from 'node:timers/promises'
 
-export const httpClient: AxiosInstance = axios.create({
-  timeout: 30000,
-  headers: {
-    'User-Agent': 'AudiobookshelfMetadataProvider/1.0.0',
-    Accept: 'application/json',
-    'Accept-Language': 'en-US,en;q=0.9',
-    'Cache-Control': 'no-cache'
-  },
-  validateStatus: (status) => status >= 200 && status < 500
-})
-
-httpClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    console.error('HTTP Request Error:', error.message)
-    return Promise.reject(error)
+export class UpstreamError extends Error {
+  constructor(
+    message: string,
+    readonly status?: number,
+    options?: ErrorOptions
+  ) {
+    super(message, options)
+    this.name = 'UpstreamError'
   }
-)
+}
+
+interface WaitingRequest {
+  resolve: () => void
+  timeout: NodeJS.Timeout
+}
+
+class HostQueue {
+  private active = 0
+  private readonly waiting: WaitingRequest[] = []
+
+  async acquire(): Promise<() => void> {
+    if (this.active < 4) {
+      this.active++
+      return () => this.release()
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        const index = this.waiting.findIndex((request) => request.timeout === timeout)
+        if (index >= 0) this.waiting.splice(index, 1)
+        reject(new UpstreamError('Upstream request queue timed out'))
+      }, 10000)
+
+      this.waiting.push({ resolve, timeout })
+    })
+
+    return () => this.release()
+  }
+
+  private release(): void {
+    const next = this.waiting.shift()
+    if (next) {
+      clearTimeout(next.timeout)
+      next.resolve()
+      return
+    }
+
+    this.active--
+  }
+}
+
+const client = axios.create({
+  timeout: 15000,
+  maxContentLength: 32 * 1024 * 1024,
+  maxBodyLength: 1024 * 1024,
+  maxRedirects: 3,
+  headers: {
+    'User-Agent': 'AudiobookshelfMetadataProvider/2.0',
+    Accept: 'application/json',
+    'Accept-Language': 'en-US,en;q=0.9'
+  },
+  validateStatus: (status) => (status >= 200 && status < 300) || status === 404
+})
+const queues = new Map<string, HostQueue>()
+
+function hostQueue(url: string): HostQueue {
+  const host = new URL(url).host
+  const existing = queues.get(host)
+  if (existing) return existing
+  if (queues.size >= 100) throw new UpstreamError('Too many upstream hosts')
+
+  const queue = new HostQueue()
+  queues.set(host, queue)
+  return queue
+}
+
+function canRetry(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) return false
+  const status = error.response?.status
+
+  return status === 429 || status === 502 || status === 503 || status === 504 || !error.response
+}
+
+async function request<T>(config: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+  if (!config.url) throw new Error('Upstream URL is required')
+  const release = await hostQueue(config.url).acquire()
+
+  try {
+    return await send<T>(config)
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new UpstreamError('Upstream HTTP request failed', error.response?.status, {
+        cause: new Error(error.message)
+      })
+    }
+    throw error
+  } finally {
+    release()
+  }
+}
+
+async function send<T>(config: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+  try {
+    return await sendWithinDeadline<T>(config)
+  } catch (error) {
+    if (config.method !== 'GET' || !canRetry(error)) throw error
+
+    const waitMs = retryDelayMs(error)
+    if (waitMs === undefined || waitMs >= remainingRequestMs()) throw error
+
+    await delay(waitMs)
+    return sendWithinDeadline<T>(config)
+  }
+}
+
+function retryDelayMs(error: unknown): number | undefined {
+  if (axios.isAxiosError(error)) {
+    const retryAfter = error.response?.headers['retry-after']
+
+    if (typeof retryAfter === 'string') {
+      const seconds = Number(retryAfter)
+      const delayMs = Number.isFinite(seconds) ? seconds * 1000 : Date.parse(retryAfter) - Date.now()
+      if (!Number.isFinite(delayMs) || delayMs > 5000) return undefined
+
+      return Math.max(0, delayMs)
+    }
+  }
+
+  return 200 + Math.round(Math.random() * 300)
+}
+
+async function sendWithinDeadline<T>(config: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+  const remainingMs = remainingRequestMs()
+  if (remainingMs === 0) throw new UpstreamError('Metadata request deadline exceeded')
+
+  const timeout = Math.min(15000, remainingMs)
+
+  return client.request<T>({ ...config, timeout })
+}
+
+export const httpClient = {
+  get<T = unknown>(url: string, config: AxiosRequestConfig = {}): Promise<AxiosResponse<T>> {
+    return request<T>({ ...config, url, method: 'GET' })
+  },
+  post<T = unknown>(url: string, data: unknown, config: AxiosRequestConfig = {}): Promise<AxiosResponse<T>> {
+    return request<T>({ ...config, url, data, method: 'POST' })
+  }
+}

@@ -10,6 +10,8 @@ services:
       - NODE_ENV=production
       - AUTH_TOKEN=${AUTH_TOKEN:-}
       - PROVIDER_WHITELIST=${PROVIDER_WHITELIST:-}
+      - ENABLE_LOCAL_PROVIDER=${ENABLE_LOCAL_PROVIDER:-false}
+      - ENABLE_CROSS_PROVIDER_ENRICHMENT=${ENABLE_CROSS_PROVIDER_ENRICHMENT:-false}
       - HARDCOVER_TOKEN=${HARDCOVER_TOKEN}
       # See https://lazylibrarian.gitlab.io/config_importing/
       - GOODREADS_API_KEY=${GOODREADS_API_KEY}

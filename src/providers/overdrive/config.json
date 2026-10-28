@@ -1,0 +1,50 @@
+{
+  "id": "overdrive",
+  "name": "OverDrive",
+  "provider": { "name": "OverDrive", "url": "https://www.overdrive.com/" },
+  "available": true,
+  "addToAudiobookshelf": false,
+  "description": "Fetches audiobook and ebook metadata from an OverDrive library",
+  "url": "https://www.overdrive.com/",
+  "parameters": [
+    {
+      "name": "library",
+      "required": true,
+      "validation": {
+        "type": "regex",
+        "pattern": "^[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?(?![\\s\\S])"
+      },
+      "description": "Library slug"
+    },
+    {
+      "name": "type",
+      "required": false,
+      "default": "all",
+      "validation": { "type": "enum", "values": ["all", "ebook", "audiobook"] },
+      "description": "Content format"
+    },
+    {
+      "name": "limit",
+      "required": false,
+      "default": 3,
+      "validation": { "type": "int", "min": 1, "max": 24 },
+      "description": "Maximum number of results"
+    }
+  ],
+  "returnedFields": [
+    "title",
+    "subtitle",
+    "author",
+    "narrator",
+    "description",
+    "cover",
+    "isbn",
+    "publisher",
+    "publishedYear",
+    "language",
+    "duration",
+    "series",
+    "genres"
+  ],
+  "comments": []
+}

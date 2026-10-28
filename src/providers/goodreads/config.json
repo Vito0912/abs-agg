@@ -1,9 +1,13 @@
 {
   "id": "goodreads",
   "name": "Goodreads",
+  "provider": {
+    "name": "Goodreads",
+    "url": "https://www.goodreads.com"
+  },
   "available": true,
-  "addToAudiobookshelf": true,
-  "description": "Book metadata from Goodreads. Note: Covers may be low quality or missing. API is deprecated but still functional.",
+  "addToAudiobookshelf": false,
+  "description": "Book metadata from Goodreads. Note: Covers may be low quality or missing. API is deprecated but still functional",
   "url": "https://www.goodreads.com",
   "requiredEnv": ["GOODREADS_API_KEY"],
   "parameters": [
@@ -15,7 +19,8 @@
         "min": 1,
         "max": 20
       },
-      "description": "Maximum number of results to return (default: 10, max: 20)"
+      "description": "Maximum number of results to return",
+      "default": 10
     }
   ],
   "returnedFields": [
@@ -31,8 +36,10 @@
     "series",
     "genres"
   ],
-  "comments": [
-    "Covers may be low quality or missing due to API limitations",
-    "Credits to https://github.com/ahobsonsayers/abs-tract"
+  "comments": ["Requires an existing Goodreads API key; the public API is deprecated."],
+  "credits": [
+    {
+      "url": "https://github.com/ahobsonsayers/abs-tract"
+    }
   ]
 }

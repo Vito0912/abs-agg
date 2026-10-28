@@ -1,0 +1,69 @@
+{
+  "id": "nextory",
+  "name": "Nextory",
+  "provider": {
+    "name": "Nextory",
+    "url": "https://nextory.com/"
+  },
+  "available": true,
+  "addToAudiobookshelf": true,
+  "description": "Fetches audiobook and ebook metadata from Nextory's public search API",
+  "url": "https://nextory.com/",
+  "parameters": [
+    {
+      "name": "type",
+      "required": false,
+      "validation": {
+        "type": "enum",
+        "values": ["all", "audiobook", "ebook"]
+      },
+      "description": "Content format. Use audiobook to exclude ebooks",
+      "default": "all"
+    },
+    {
+      "name": "includeErotic",
+      "required": false,
+      "validation": {
+        "type": "enum",
+        "values": ["true", "false"]
+      },
+      "description": "Include books flagged is_adult_book by Nextory. Set false to exclude them",
+      "default": "true"
+    },
+    {
+      "name": "limit",
+      "required": false,
+      "validation": {
+        "type": "int",
+        "min": 1,
+        "max": 12
+      },
+      "description": "Maximum number of results",
+      "default": 12
+    },
+    {
+      "name": "market",
+      "required": false,
+      "validation": {
+        "type": "enum",
+        "values": ["DE", "AT", "CH", "DK", "ES", "FI", "FR", "NL", "NO", "SE"]
+      },
+      "description": "Nextory country code",
+      "default": "DE"
+    }
+  ],
+  "returnedFields": [
+    "title",
+    "author",
+    "narrator",
+    "description",
+    "cover",
+    "isbn",
+    "series",
+    "language",
+    "publishedYear",
+    "publisher",
+    "duration"
+  ],
+  "comments": []
+}

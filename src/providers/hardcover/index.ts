@@ -1,245 +1,34 @@
+import { normalizeLanguage } from '../../metadata/identity'
+import { normalizeBooks } from '../../metadata/normalize'
+import { bundleBooks } from '../../metadata/projection'
+import type { BookMetadata, ParsedParameters, ProviderConfig } from '../../types'
+import { mapConcurrent } from '../../utils/concurrency'
 import { BaseProvider } from '../BaseProvider'
-import { BookMetadata, ParsedParameters, ProviderConfig } from '../../types'
-import { normalizeBookMetadata } from '../../utils/helpers'
-import { HardcoverBook, HardcoverBooksResponse, HardcoverSearchResponse } from './types'
-import { HARDCOVER_API_URL, SEARCH_QUERY, BOOK_DETAILS_QUERY } from './queries'
-import path from 'path'
-import fs from 'fs'
-import axios from 'axios'
-
-const configPath = path.join(__dirname, 'config.json')
-const config: ProviderConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+import { HardcoverClient } from './client'
+import { mapHardcoverBook } from './mapper'
 
 export default class HardcoverProvider extends BaseProvider {
-  private apiToken: string
+  private readonly client: HardcoverClient
 
-  constructor() {
+  constructor(config: ProviderConfig) {
     super(config)
-    this.apiToken = process.env.HARDCOVER_TOKEN || ''
+    this.client = new HardcoverClient(process.env.HARDCOVER_TOKEN || '')
   }
 
-  private getHeaders(): Record<string, string> {
-    return {
-      'Content-Type': 'application/json',
-      authorization: `Bearer ${this.apiToken}`,
-      'User-Agent': 'AudiobookshelfMetadataProvider/1.0'
-    }
-  }
+  protected async searchBooks(title: string, author: string | null, params: ParsedParameters): Promise<BookMetadata[]> {
+    const limit = Math.min(Number(params.limit) || 10, 25)
+    const ids = await this.client.searchIds(title, author, limit)
+    const language = normalizeLanguage(typeof params.language === 'string' ? params.language : undefined)
 
-  async search(
-    title: string,
-    author: string | null,
-    params: ParsedParameters,
-    _options?: { skipCache?: boolean }
-  ): Promise<BookMetadata[]> {
-    const limit = Math.min((params.limit as number) || 10, 25)
-    const languageFilter = params.language as string | undefined
+    const bundles = await mapConcurrent(ids, 3, (id) => {
+      return this.cachedMetadata('work', String(id), params, async () => {
+        const books = await this.client.books([id])
 
-    const bookIds = await this.fetchBookIds(title, author, limit)
-    if (bookIds.length === 0) {
-      return []
-    }
-
-    const books = await this.fetchBookDetails(bookIds)
-    return this.processResults(books, bookIds, languageFilter)
-  }
-
-  private async fetchBookIds(title: string, author: string | null, limit: number): Promise<number[]> {
-    const searchQuery = author ? `${title} ${author}` : title
-
-    const searchResponse = await axios.post<{ data?: HardcoverSearchResponse }>(
-      HARDCOVER_API_URL,
-      {
-        query: SEARCH_QUERY,
-        variables: {
-          query: searchQuery,
-          perPage: limit,
-          page: 1
-        }
-      },
-      { headers: this.getHeaders() }
-    )
-
-    if (searchResponse.status !== 200) {
-      throw new Error(`Hardcover API error: ${searchResponse.status}`)
-    }
-
-    const rawIds = searchResponse.data?.data?.search?.ids || []
-    const bookIds = rawIds.map((id) => (typeof id === 'string' ? parseInt(id, 10) : id))
-
-    return bookIds
-  }
-
-  private async fetchBookDetails(bookIds: number[]): Promise<HardcoverBook[]> {
-    const detailsResponse = await axios.post<{ data?: HardcoverBooksResponse }>(
-      HARDCOVER_API_URL,
-      {
-        query: BOOK_DETAILS_QUERY,
-        variables: { ids: bookIds }
-      },
-      { headers: this.getHeaders() }
-    )
-
-    if (detailsResponse.status !== 200) {
-      throw new Error(`Hardcover API error: ${detailsResponse.status}`)
-    }
-
-    const books = detailsResponse.data?.data?.books || []
-
-    return books
-  }
-
-  private processResults(books: HardcoverBook[], bookIds: number[], languageFilter?: string): BookMetadata[] {
-    const idOrder = new Map(bookIds.map((id, index) => [id, index]))
-    books.sort((a, b) => {
-      const orderA = idOrder.get(a.id || 0) ?? Number.MAX_VALUE
-      const orderB = idOrder.get(b.id || 0) ?? Number.MAX_VALUE
-      return orderA - orderB
+        return normalizeBooks(books.flatMap(mapHardcoverBook), this.config.id, params)
+      })
     })
 
-    const results: BookMetadata[] = []
-
-    for (const book of books) {
-      const metadata = this.mapBookToMetadata(book)
-
-      if (languageFilter && metadata.language && metadata.language !== languageFilter) {
-        continue
-      }
-
-      if (metadata.title) {
-        results.push(metadata)
-      }
-    }
-
-    return results
-  }
-
-  private mapBookToMetadata(book: HardcoverBook): BookMetadata {
-    const { authors, narrators } = this.extractContributors(book)
-    const series = this.extractSeries(book)
-    const coverUrl = this.extractCoverUrl(book)
-    const { isbn, asin, publisher, language } = this.extractEditionInfo(book)
-    const tags = this.extractTags(book)
-
-    return normalizeBookMetadata({
-      title: book.title,
-      subtitle: book.subtitle,
-      author: authors.length > 0 ? authors.join(', ') : undefined,
-      narrator: narrators.length > 0 ? narrators.join(', ') : undefined,
-      description: book.description,
-      cover: coverUrl,
-      isbn,
-      asin,
-      publisher,
-      publishedYear: book.release_year,
-      language,
-      series: series.length > 0 ? series : undefined,
-      tags: tags.length > 0 ? tags : undefined
-    })
-  }
-
-  private extractContributors(book: HardcoverBook): { authors: string[]; narrators: string[] } {
-    const authors: string[] = []
-    const narrators: string[] = []
-
-    if (book.contributions && book.contributions.length > 0) {
-      for (const contribution of book.contributions) {
-        if (contribution.author?.name) {
-          const contributionType = (contribution.contribution || '').toLowerCase()
-          if (contributionType.includes('narrator') || contributionType.includes('read by')) {
-            narrators.push(contribution.author.name)
-          } else {
-            authors.push(contribution.author.name)
-          }
-        }
-      }
-    }
-
-    return { authors, narrators }
-  }
-
-  private extractSeries(book: HardcoverBook): Array<{ series: string; sequence?: string }> {
-    return (
-      book.book_series
-        ?.map((bs) => ({
-          series: bs.series?.name || '',
-          sequence: bs.position != null ? String(bs.position) : undefined
-        }))
-        .filter((s) => s.series) || []
-    )
-  }
-
-  private extractCoverUrl(book: HardcoverBook): string | undefined {
-    if (book.default_cover_edition?.image?.url) {
-      return book.default_cover_edition.image.url
-    }
-    return book.image?.url
-  }
-
-  private extractEditionInfo(book: HardcoverBook): {
-    isbn?: string
-    asin?: string
-    publisher?: string
-    language?: string
-  } {
-    let isbn: string | undefined
-    let asin: string | undefined
-    let publisher: string | undefined
-    let language: string | undefined
-
-    const physicalEdition = book.default_physical_edition
-    if (physicalEdition) {
-      isbn = physicalEdition.isbn_13 || physicalEdition.isbn_10
-      publisher = physicalEdition.publisher?.name
-      language = physicalEdition.language?.language
-    }
-
-    const audioEdition = book.default_audio_edition
-    if (audioEdition) {
-      asin = audioEdition.asin
-      if (!publisher) {
-        publisher = audioEdition.publisher?.name
-      }
-      if (!language) {
-        language = audioEdition.language?.language
-      }
-    }
-
-    if (!isbn && book.editions && book.editions.length > 0) {
-      for (const edition of book.editions) {
-        if (edition.isbn_13 || edition.isbn_10) {
-          isbn = edition.isbn_13 || edition.isbn_10
-          break
-        }
-      }
-    }
-
-    if (!asin && book.editions && book.editions.length > 0) {
-      for (const edition of book.editions) {
-        if (edition.asin) {
-          asin = edition.asin
-          break
-        }
-      }
-    }
-
-    return { isbn, asin, publisher, language }
-  }
-
-  private extractTags(book: HardcoverBook): string[] {
-    const tags: string[] = []
-    const seen = new Set<string>()
-
-    if (book.taggings && book.taggings.length > 0) {
-      for (const tagging of book.taggings) {
-        const tagName = tagging.tag?.tag
-        if (tagName && !seen.has(tagName.toLowerCase())) {
-          seen.add(tagName.toLowerCase())
-          tags.push(tagName)
-        }
-      }
-    }
-
-    return tags
+    const results = bundles.flatMap(bundleBooks)
+    return results.filter((book) => !language || normalizeLanguage(book.language) === language)
   }
 }

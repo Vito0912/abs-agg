@@ -1,8 +1,12 @@
 {
   "id": "librivox",
   "name": "LibriVox",
+  "provider": {
+    "name": "LibriVox",
+    "url": "https://librivox.org/"
+  },
   "available": true,
-  "description": "Fetches metadata from LibriVox's public domain audiobook API. LibriVox provides free public domain audiobooks read by volunteers.",
+  "description": "Fetches metadata from LibriVox's public domain audiobook API. LibriVox provides free public domain audiobooks read by volunteers",
   "url": "https://librivox.org/",
   "parameters": [
     {
@@ -21,7 +25,8 @@
         "min": 1,
         "max": 20
       },
-      "description": "Maximum number of results to return (default: 10, max: 20)"
+      "description": "Maximum number of results to return",
+      "default": 10
     }
   ],
   "returnedFields": [
@@ -36,7 +41,5 @@
     "publishedYear",
     "bookId"
   ],
-  "comments": [
-    "Use ^ prefix in title/author/genre to anchor search to beginning of term"
-  ]
+  "comments": ["Prefix title, author, or genre with ^ to match the beginning of the term."]
 }

@@ -1,8 +1,12 @@
 {
   "id": "hardcover",
   "name": "Hardcover",
+  "provider": {
+    "name": "Hardcover",
+    "url": "https://hardcover.app"
+  },
   "available": true,
-  "addToAudiobookshelf": true,
+  "addToAudiobookshelf": false,
   "description": "Book metadata from Hardcover.app",
   "url": "https://hardcover.app",
   "requiredEnv": ["HARDCOVER_TOKEN"],
@@ -23,14 +27,14 @@
         "min": 1,
         "max": 25
       },
-      "description": "Maximum number of results to return (default: 10, max: 25)"
+      "description": "Maximum number of results to return",
+      "default": 10
     }
   ],
   "returnedFields": [
     "title",
     "subtitle",
     "author",
-    "narrator",
     "description",
     "cover",
     "isbn",
@@ -39,7 +43,8 @@
     "publishedYear",
     "language",
     "series",
-    "tags"
+    "tags",
+    "duration"
   ],
-  "comments": ["The searching seems to be a bit broken, not finding results that exist."]
+  "comments": []
 }

@@ -1,48 +1,58 @@
-import { Request, Response } from 'express'
+import type { Request, Response } from 'express'
+import { z } from 'zod'
+import { absMatches } from '../metadata/projection'
+import { enrichMetadata } from '../metadata/enrichment'
 import { dbManager } from '../database/manager'
-import { createParametersHash } from '../utils/helpers'
+import type { MetadataBundle, MetadataQuery } from '../types'
+
+const querySchema = z.object({
+  title: z.string().trim().min(1).max(500),
+  author: z.string().trim().min(1).max(300).optional(),
+  cache: z.enum(['true', 'false', 'refresh']).optional(),
+  enrich: z.enum(['true', 'false']).optional()
+})
+
+class InvalidSearchRequest extends Error {
+  constructor(readonly details: z.ZodError) {
+    super('Invalid request parameters')
+  }
+}
+
+function parseQuery(req: Request): MetadataQuery {
+  const result = querySchema.safeParse({ ...req.query, title: req.query.title || req.query.query })
+  if (!result.success) throw new InvalidSearchRequest(result.error)
+
+  return { title: result.data.title, author: result.data.author }
+}
+
+async function search(req: Request): Promise<MetadataBundle> {
+  if (!req.provider || !req.parsedParams) throw new Error('Provider request was not initialized')
+
+  const query = parseQuery(req)
+  const params = { ...req.parsedParams }
+
+  const bundle = await req.provider.searchMetadata(query, params)
+  const enrichmentEnabled = process.env.ENABLE_CROSS_PROVIDER_ENRICHMENT === 'true'
+  if (!enrichmentEnabled || req.query.enrich === 'false') return bundle
+
+  return enrichMetadata(bundle, await dbManager.catalogProviders())
+}
 
 export async function searchHandler(req: Request, res: Response): Promise<void> {
-  let { title, query, author } = req.query
-  const { provider, parsedParams } = req
-
-  if (!provider || !parsedParams) {
-    res.status(500).json({ error: 'Internal error: provider or params not set' })
-    return
-  }
-
-  if (!title) title = query
-  if (!title || typeof title !== 'string') {
-    res.status(400).json({ error: 'Missing required query parameter: title' })
-    return
-  }
-
-  const authorStr = author && typeof author === 'string' ? author : null
-  const config = provider.getConfig()
-  const paramsHash = createParametersHash(parsedParams)
-
-  const skipCache = req.query.cache === 'false' || process.env.SKIP_CACHE === 'true'
-
-  if (!skipCache) {
-    const cached = dbManager.getSearchCache(config.id, title, authorStr, paramsHash)
-    if (cached) {
-      try {
-        const cachedData = JSON.parse(cached)
-        res.json({ matches: cachedData })
-        return
-      } catch (e) {
-        console.error('Failed to parse cached data:', e)
-      }
-    }
-  }
-
   try {
-    const matches = await provider.search(title, authorStr, parsedParams, { skipCache })
-    dbManager.setSearchCache(config.id, title, authorStr, paramsHash, JSON.stringify(matches))
-
-    res.json({ matches })
+    const bundle = await search(req)
+    res.json({ matches: absMatches(bundle) })
   } catch (error) {
-    console.error('Search error:', error)
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' })
+    sendSearchError(error, res)
   }
+}
+
+function sendSearchError(error: unknown, res: Response): void {
+  if (error instanceof InvalidSearchRequest) {
+    res.status(400).json({ error: error.message, details: error.details.issues })
+    return
+  }
+
+  console.error('Provider request failed:', error)
+  res.status(500).json({ error: 'Metadata provider request failed' })
 }

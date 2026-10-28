@@ -2,7 +2,11 @@
   "id": "thalia",
   "available": false,
   "name": "Thalia",
-  "description": "Fetches metadata from Thalia's public search API - a major book retailer in Germany.",
+  "provider": {
+    "name": "Thalia",
+    "url": "https://www.thalia.de/"
+  },
+  "description": "Fetches metadata from Thalia's public search API - a major book retailer in Germany",
   "url": "https://www.thalia.de/",
   "parameters": [
     {
@@ -13,16 +17,18 @@
         "min": 1,
         "max": 30
       },
-      "description": "Maximum number of results to return (default: 3, max: 30)"
+      "description": "Maximum number of results to return",
+      "default": 5
     },
     {
       "name": "type",
       "required": false,
       "validation": {
-        "type": "string",
-        "enum": ["ebook", "audiobook", "all"]
+        "type": "enum",
+        "values": ["ebook", "audiobook", "all"]
       },
-      "description": "Type of the book to search for (default: all)"
+      "description": "Type of the book to search for",
+      "default": "all"
     }
   ],
   "returnedFields": [
@@ -40,5 +46,5 @@
     "duration",
     "tags"
   ],
-  "comments": ["Currently does not work because of CF"]
+  "comments": ["Disabled because upstream requests are blocked by Cloudflare."]
 }

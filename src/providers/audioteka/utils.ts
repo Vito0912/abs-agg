@@ -1,5 +1,5 @@
 import * as cheerio from 'cheerio'
-import { AudiotekaLanguageConfig, AudiotekaSearchMatch, AudiotekaFullMetadata } from './types'
+import type { AudiotekaFullMetadata, AudiotekaLanguageConfig, AudiotekaSearchMatch } from './types'
 
 const BASE_URL = 'https://audioteka.com'
 

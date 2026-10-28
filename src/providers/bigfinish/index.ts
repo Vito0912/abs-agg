@@ -1,13 +1,10 @@
-import { BaseProvider } from '../BaseProvider'
-import { BookMetadata, ParsedParameters, ProviderConfig } from '../../types'
+import { z } from 'zod'
+import type { BookMetadata, ParsedParameters, ProviderConfig } from '../../types'
 import { normalizeBookMetadata } from '../../utils/helpers'
-import { dbManager } from '../../database/manager'
 import { httpClient } from '../../utils/httpClient'
-import path from 'path'
-import fs from 'fs'
-
-const configPath = path.join(__dirname, 'config.json')
-const config: ProviderConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+import { BaseProvider } from '../BaseProvider'
+import { bigFinishReleaseDataSchema, bigFinishSearchResponseSchema } from './schemas'
+import type { BigFinishReleaseData, BigFinishSearchResult, NamedContributor, ParsedBookData } from './types'
 
 const BASE_URL = 'https://www.bigfinish.com'
 const SEARCH_URL = `${BASE_URL}/api/search`
@@ -30,72 +27,13 @@ const RSC_HEADERS = {
   rsc: '1'
 }
 
-interface BigFinishSearchResult {
-  id: number
-  release_slug: string
-  name: string
-  range_id: number | null
-  description: string | null
-  duration: string | null
-  image: string | null
-  contributors: { name: string }[]
-  indexUid: string
-}
-
-interface BigFinishSearchResponse {
-  hits: BigFinishSearchResult[]
-  estimatedTotalHits: number
-  limit: number
-  offset: number
-  query: string
-}
-
-interface ParsedBookData {
-  schemaVersion: 3
-  url: string
-  title: string | null
-  series: string | null
-  seriesTag: string | null
-  releaseDate: string | null
-  about: string | null
-  duration: string | null
-  writtenBy: string | null
-  narratedBy: string | null
-  coverUrl: string | null
-  isbn: string | null
-}
-
-interface NamedContributor {
-  name?: string
-  label?: string
-}
-
-interface BigFinishReleaseData {
-  title?: string
-  range?: string
-  release_number?: string | number
-  release_date?: string
-  image?: string
-  about?: { summary?: string | null }
-  written_by?: NamedContributor[]
-  contributors?: NamedContributor[]
-  cast?: NamedContributor[]
-  production_credits?: Record<string, NamedContributor[] | Record<string, unknown> | undefined>
-}
-
 export default class BigFinishProvider extends BaseProvider {
-  constructor() {
+  constructor(config: ProviderConfig) {
     super(config)
   }
 
-  async search(
-    title: string,
-    _author: string | null,
-    params: ParsedParameters,
-    options?: { skipCache?: boolean }
-  ): Promise<BookMetadata[]> {
-    const limit = Math.min((params.limit as number) || 3, 5)
-    const skipCache = options?.skipCache === true
+  async searchBooks(title: string, _author: string | null, params: ParsedParameters): Promise<BookMetadata[]> {
+    const limit = Math.min(Number(params.limit) || 3, 5)
 
     const query = title.replace(/:/g, ' ')
 
@@ -105,7 +43,7 @@ export default class BigFinishProvider extends BaseProvider {
       throw new Error(`Big Finish search API error: ${searchRes.status}`)
     }
 
-    const searchData = searchRes.data as BigFinishSearchResponse
+    const searchData = bigFinishSearchResponseSchema.parse(searchRes.data)
     const hits = (searchData.hits.filter((hit) => hit.indexUid == 'audiobook_models') ?? []).slice(0, limit)
 
     const books: BookMetadata[] = []
@@ -115,40 +53,20 @@ export default class BigFinishProvider extends BaseProvider {
 
       const productUrl = `${BASE_URL}/releases/v/${hit.release_slug}`
 
-      let bookData: ParsedBookData | null = null
-
-      if (!skipCache) {
-        const bookCache = dbManager.getBookCache(this.config.id, productUrl)
-        if (bookCache) {
-          try {
-            const cachedData = JSON.parse(bookCache) as ParsedBookData
-            if (cachedData.schemaVersion === 3) bookData = cachedData
-          } catch {}
-        }
-      }
-
-      if (!bookData) {
+      const metadata = await this.cachedBook(productUrl, params, async () => {
         const pageRes = await httpClient.get(productUrl, {
           headers: RSC_HEADERS,
           responseType: 'text'
         })
 
-        if (pageRes.status === 200) {
-          const rsc = typeof pageRes.data === 'string' ? pageRes.data : String(pageRes.data)
-          bookData = this.parseProductPage(productUrl, rsc, hit)
+        if (pageRes.status !== 200) throw new Error(`Big Finish details error: ${pageRes.status}`)
 
-          if (bookData && !skipCache) {
-            dbManager.setBookCache(this.config.id, productUrl, JSON.stringify(bookData))
-          }
-        }
-      }
+        const rsc = String(pageRes.data)
+        const bookData = this.parseProductPage(productUrl, rsc, hit)
+        return bookData ? this.mapToMetadata(bookData) : null
+      })
 
-      if (bookData) {
-        const metadata = this.mapToMetadata(bookData)
-        if (metadata.title) {
-          books.push(metadata)
-        }
-      }
+      if (metadata?.title) books.push(metadata)
     }
 
     return books
@@ -163,7 +81,8 @@ export default class BigFinishProvider extends BaseProvider {
     const contributors = releaseData.contributors?.length ? releaseData.contributors : hit.contributors || []
     const narrators = this.namesFrom([...contributors, ...castNarrators])
     const authors = this.namesFrom(releaseData.written_by)
-    const technicalDetails = releaseData.production_credits?.technical_details as Record<string, unknown> | undefined
+    const rawDetails = releaseData.production_credits?.technical_details
+    const technicalDetails = z.record(z.string(), z.unknown()).optional().parse(rawDetails)
     const duration =
       technicalDetails?.duration_digital_verified_minutes ||
       technicalDetails?.duration_physical_verified_minutes ||
@@ -209,7 +128,9 @@ export default class BigFinishProvider extends BaseProvider {
         depth--
         if (depth === 0) {
           try {
-            const payload = JSON.parse(rsc.slice(start, index + 1)) as { releaseData?: BigFinishReleaseData }
+            const payload = z
+              .object({ releaseData: bigFinishReleaseDataSchema.optional() })
+              .parse(JSON.parse(rsc.slice(start, index + 1)))
             return payload.releaseData || null
           } catch {
             return null
@@ -269,7 +190,7 @@ export default class BigFinishProvider extends BaseProvider {
   private escapeHtml(value: string): string {
     return value.replace(
       /[&<>"']/g,
-      (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!
+      (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character] || character
     )
   }
 
@@ -308,6 +229,8 @@ export default class BigFinishProvider extends BaseProvider {
 
     return normalizeBookMetadata({
       title: data.title,
+      bookId: data.url,
+      format: 'audiobook',
       author: data.writtenBy,
       narrator: data.narratedBy,
       description: data.about,

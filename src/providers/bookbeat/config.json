@@ -1,9 +1,13 @@
 {
   "id": "bookbeat",
   "name": "BookBeat",
+  "provider": {
+    "name": "BookBeat",
+    "url": "https://www.bookbeat.com/"
+  },
   "available": true,
-  "addToAudiobookshelf": true,
-  "description": "Fetches metadata from BookBeat's public search API.",
+  "addToAudiobookshelf": false,
+  "description": "Fetches metadata from BookBeat's public search API",
   "url": "https://www.bookbeat.com/",
   "parameters": [
     {
@@ -53,7 +57,8 @@
         "type": "enum",
         "values": ["true", "false"]
       },
-      "description": "Whether to include erotic books (default: false)"
+      "description": "Whether to include erotic books",
+      "default": "false"
     },
     {
       "name": "includeHighResCovers",
@@ -62,12 +67,20 @@
         "type": "enum",
         "values": ["true", "false"]
       },
-      "description": "Whether to include high resolution covers. This highly increases cover loading time (default: false)"
+      "description": "Whether to include high resolution covers. This highly increases cover loading time",
+      "default": "false"
     }
   ],
-  "returnedFields": ["title", "author", "description", "cover", "isbn", "series", "language", "publishedYear"],
-  "comments": [
-    "Data might be unrelated a bit.",
-    "There are made up to 4 requests per search, so consider ratelimiting if self-hosted! Please check you local laws regarding web scraping and API usage."
-  ]
+  "returnedFields": [
+    "title",
+    "author",
+    "narrator",
+    "description",
+    "cover",
+    "isbn",
+    "series",
+    "language",
+    "publishedYear"
+  ],
+  "comments": []
 }

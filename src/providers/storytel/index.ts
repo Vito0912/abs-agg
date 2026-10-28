@@ -1,125 +1,37 @@
-import { BaseProvider } from '../BaseProvider'
-import { BookMetadata, ParsedParameters, ProviderConfig } from '../../types'
+import type { BookMetadata, ParsedParameters, ProviderConfig } from '../../types'
 import { normalizeBookMetadata } from '../../utils/helpers'
 import { httpClient } from '../../utils/httpClient'
+import { BaseProvider } from '../BaseProvider'
+import { storytelSearchResponseSchema } from './schemas'
+import type { StorytelSearchResult } from './types'
 import { cleanTitle, extractSubtitle } from './utils'
-import path from 'path'
-import fs from 'fs'
-
-const configPath = path.join(__dirname, 'config.json')
-const config: ProviderConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
-
-interface StorytelBook {
-  id: number
-  name: string
-  consumableId: string
-  cover?: string
-  coverE?: string
-  largeCover?: string
-  largeCoverE?: string
-  authorsAsString?: string
-  language?: {
-    id: number
-    isoValue: string
-    name: string
-  }
-  category?: {
-    id: number
-    title: string
-  }
-  publisher?: {
-    id: number
-    name: string
-  }
-  releaseDate?: string
-  series?: Array<{
-    id: number
-    name: string
-  }>
-  seriesOrder?: number
-  tags?: Array<{
-    id: number
-    name: string
-  }>
-}
-
-interface StorytelAbook {
-  id: number
-  isbn?: string
-  length?: number
-  narratorAsString?: string
-  narrators?: Array<{
-    id: number
-    name: string
-  }>
-  description?: string
-  publisher?: {
-    id: number
-    name: string
-  }
-  releaseDate?: string
-}
-
-interface StorytelEbook {
-  id: number
-  isbn?: string
-  description?: string
-  publisher?: {
-    id: number
-    name: string
-  }
-  releaseDate?: string
-}
-
-interface StorytelSearchResult {
-  abook?: StorytelAbook | null
-  book?: StorytelBook | null
-  ebook?: StorytelEbook | null
-  consumableId?: string
-  shareUrl?: string
-}
-
-interface StorytelSearchResponse {
-  books: StorytelSearchResult[]
-  suggestions?: unknown[]
-}
 
 export default class StorytelProvider extends BaseProvider {
-  constructor() {
+  constructor(config: ProviderConfig) {
     super(config)
   }
 
-  async search(
-    title: string,
-    _author: string | null,
-    params: ParsedParameters,
-    _options?: { skipCache?: boolean }
-  ): Promise<BookMetadata[]> {
-    const language = params.language as string
-    const limit = Math.min((params.limit as number) || 3, 10)
+  async searchBooks(title: string, _author: string | null, params: ParsedParameters): Promise<BookMetadata[]> {
+    const language = String(params.language)
+    const limit = Math.min(Number(params.limit) || 3, 10)
 
     const searchUrl = `https://www.storytel.com/api/search.action?request_locale=${encodeURIComponent(language)}&q=${encodeURIComponent(title.replace(/\s+/g, '+'))}`
 
     const searchRes = await httpClient.get(searchUrl)
     if (searchRes.status !== 200) throw new Error('Storytel search API error')
-    const searchJson = searchRes.data as StorytelSearchResponse
+    const searchJson = storytelSearchResponseSchema.parse(searchRes.data)
     const searchResults = searchJson.books || []
 
     const books: BookMetadata[] = []
-    for (const result of searchResults
-      .filter((f) =>
-        params.type
-          ? (f.abook && f.abook != null && params.type === 'audiobook') ||
-            (f.ebook && f.abook != null && params.type === 'ebook') ||
-            (f.book && f.book != null && params.type === 'all')
-          : true
-      )
-      .slice(0, limit)) {
+
+    for (const result of searchResults.slice(0, limit)) {
       if (!result.book) continue
 
-      const metadata = this.mapStorytelToMetadata(result, params)
-      if (metadata.title) {
-        books.push(metadata)
+      if (result.abook && params.type !== 'ebook') {
+        books.push(this.mapStorytelToMetadata(result, { ...params, type: 'audiobook' }))
+      }
+      if (result.ebook && params.type !== 'audiobook') {
+        books.push(this.mapStorytelToMetadata(result, { ...params, type: 'ebook' }))
       }
     }
 
@@ -131,7 +43,7 @@ export default class StorytelProvider extends BaseProvider {
     let abook = result.abook
     let ebook = result.ebook
 
-    switch (params.type as string) {
+    switch (params.type) {
       case 'audiobook':
         ebook = undefined
         break
@@ -160,7 +72,7 @@ export default class StorytelProvider extends BaseProvider {
       params.type === 'ebook'
         ? (book.largeCoverE || book.coverE || book.largeCover || book.cover)?.replace(/\d{3}x\d{3}/, '1200x1200')
         : (book.largeCover || book.cover || book.largeCoverE || book.coverE)?.replace(/\d{3}x\d{3}/, '1200x1200')
-    const duration = abook?.length ? Math.round(abook.length / 1000 / 60) : undefined
+    const durationSeconds = abook?.length === undefined ? undefined : abook.length / 1000
 
     const narrators = abook?.narrators?.map((n) => n.name).join(', ') || abook?.narratorAsString
 
@@ -174,6 +86,7 @@ export default class StorytelProvider extends BaseProvider {
         ? [
             {
               series: book.series[0].name,
+              sourceId: String(book.series[0].id),
               sequence: book.seriesOrder ? String(book.seriesOrder) : undefined
             }
           ]
@@ -183,17 +96,20 @@ export default class StorytelProvider extends BaseProvider {
 
     return normalizeBookMetadata({
       title,
+      bookId: abook ? `audio:${abook.id}` : `ebook:${ebook?.id}`,
+      format: abook ? 'audiobook' : 'ebook',
+      work: { id: String(book.id), title: book.name },
       subtitle,
       author: book.authorsAsString,
       narrator: narrators,
       publisher,
       publishedYear,
       description,
-      cover: cover ? `https://www.storytel.com${cover}` : undefined,
+      cover: cover ? new URL(cover, 'https://www.storytel.com').href : undefined,
       isbn,
       series,
       language: book.language?.isoValue,
-      duration,
+      durationSeconds,
       tags
     })
   }

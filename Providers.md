@@ -1,10 +1,12 @@
 # Metadata Providers
 
-Total Providers: 15
+Total Providers: 22
 
 ## Table of Contents
 
 - [ARD Audiothek](#ardaudiothek)
+- [Audible](#audible)
+- [AudioSilo Meta](#audiosilo)
 - [Audioteka](#audioteka)
 - [Big Finish](#bigfinish)
 - [BookBeat](#bookbeat)
@@ -16,6 +18,11 @@ Total Providers: 15
 - [Hardcover](#hardcover)
 - [LibriVox](#librivox)
 - [Libro.fm](#librofm)
+- [Local catalog](#local)
+- [Nextory](#nextory)
+- [OverDrive](#overdrive)
+- [Podium Entertainment](#podium)
+- [Skoobe](#skoobe)
 - [Soundbooth Theater](#soundbooththeater)
 - [Storytel](#storytel)
 - [The StoryGraph](#storygraph)
@@ -26,18 +33,20 @@ Total Providers: 15
 
 **ID:** `ardaudiothek`
 
-**Description:** Fetches audiobook metadata from the ARD Audiothek (public broadcasters in Germany).
+**Description:** Fetches audiobook metadata from the ARD Audiothek (public broadcasters in Germany)
 
-**Metadata-URL:** [https://www.ardaudiothek.de/](https://www.ardaudiothek.de/)
+**Metadata provider:** [ARD Audiothek](https://www.ardaudiothek.de/)
+
+**Inspiration:** [Source](https://github.com/h43lb1t0/ARD_Audiothek_provider)
 
 ### Parameters
 
 #### Optional Parameters
 
-| Name         | Type | Validation            | Description                                                                                                                                               |
-| ------------ | ---- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `limit`      | int  | 1-20                  | Maximum number of results to return (default: 5, max: 20)                                                                                                 |
-| `searchType` | enum | [search, programsets] | Search type: 'search' (default) for general search (preferred for single items) or 'programsets' for program set specific search (preferred for podcasts) |
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `limit` | int | 1-20 | 5 | Maximum number of results to return |
+| `searchType` | enum | [search, programsets] | search | Search type: 'search' for general search (preferred for single items) or 'programsets' for program set specific search (preferred for podcasts) |
 
 ### Returned Fields
 
@@ -57,22 +66,93 @@ Total Providers: 15
 GET /ardaudiothek/search?title=example&author=author
 ```
 
-### Add to Audiobookshelf
-
-```
-https://provider.vito0912.de/ardaudiothek
-```
-
-Under "Auth" use `abs`
-
-For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
-
-> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
-
 ### Comments
 
-- German language only provider.
-- Credits https://github.com/h43lb1t0/ARD_Audiothek_provider for inital idea in Python
+- Metadata is in German.
+
+---
+
+## Audible
+
+**ID:** `audible`
+
+**Description:** Audiobook metadata from Audible's public catalog, with marketplace-specific identifiers and ratings
+
+**Metadata provider:** [Audible](https://www.audible.com/)
+
+### Parameters
+
+#### Optional Parameters
+
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `region` | enum | [us, uk, de, fr, ca, au, it, es, in, jp, br] | us | Audible marketplace |
+| `limit` | int | 1-20 | 5 | Maximum results |
+
+### Returned Fields
+
+- `title`
+- `subtitle`
+- `author`
+- `narrator`
+- `description`
+- `cover`
+- `asin`
+- `isbn`
+- `publisher`
+- `publishedYear`
+- `language`
+- `duration`
+- `genres`
+- `series`
+
+### Example Request
+
+```
+GET /audible/search?title=example&author=author
+```
+
+---
+
+## AudioSilo Meta
+
+**ID:** `audiosilo`
+
+**Description:** Community audiobook metadata with works, narrators, series, identifiers, and chapter timings
+
+**Metadata provider:** [AudioSilo Meta](https://meta.audiosilo.app/)
+
+### Parameters
+
+#### Optional Parameters
+
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `limit` | int | 1-10 | 5 | Maximum results |
+| `region` | regex | `^[a-z]{2}$` | us | Preferred ASIN marketplace when a recording has several |
+
+### Returned Fields
+
+- `title`
+- `subtitle`
+- `author`
+- `narrator`
+- `description`
+- `cover`
+- `asin`
+- `isbn`
+- `publisher`
+- `publishedYear`
+- `language`
+- `duration`
+- `genres`
+- `series`
+
+### Example Request
+
+```
+GET /audiosilo/search?title=example&author=author
+```
 
 ---
 
@@ -80,23 +160,25 @@ For deployments with authentication enabled, use the configured `AUTH_TOKEN` ins
 
 **ID:** `audioteka`
 
-**Description:** Fetches audiobook metadata from Audioteka, a popular audiobook platform in Central and Eastern Europe.
+**Description:** Fetches audiobook metadata from Audioteka, a popular audiobook platform in Central and Eastern Europe
 
-**Metadata-URL:** [https://audioteka.com/](https://audioteka.com/)
+**Metadata provider:** [Audioteka](https://audioteka.com/)
+
+**Inspiration:** [Source](https://github.com/lakafior/audioteka-abs)
 
 ### Parameters
 
 #### Required Parameters
 
-| Name   | Type | Validation           | Description                                                                              |
-| ------ | ---- | -------------------- | ---------------------------------------------------------------------------------------- |
-| `lang` | enum | [pl, cz, de, sk, lt] | Language/region code: pl (Polish), cz (Czech), de (German), sk (Slovak), lt (Lithuanian) |
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `lang` | enum | [pl, cz, de, sk, lt] | - | Language/region code: pl (Polish), cz (Czech), de (German), sk (Slovak), lt (Lithuanian) |
 
 #### Optional Parameters
 
-| Name    | Type | Validation | Description                                               |
-| ------- | ---- | ---------- | --------------------------------------------------------- |
-| `limit` | int  | 1-20       | Maximum number of results to return (default: 5, max: 20) |
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `limit` | int | 1-20 | 5 | Maximum number of results to return |
 
 ### Returned Fields
 
@@ -118,39 +200,23 @@ For deployments with authentication enabled, use the configured `AUTH_TOKEN` ins
 GET /audioteka/lang:pl/search?title=example&author=author
 ```
 
-### Add to Audiobookshelf
-
-```
-https://provider.vito0912.de/audioteka/lang:pl
-```
-
-Under "Auth" use `abs`
-
-For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
-
-> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
-
-### Comments
-
-- Credits https://github.com/lakafior/audioteka-abs for the original implementation.
-
 ---
 
 ## Big Finish
 
 **ID:** `bigfinish`
 
-**Description:** Fetches audiobook metadata from Big Finish Productions (Doctor Who, Torchwood, and other audio dramas).
+**Description:** Fetches audiobook metadata from Big Finish Productions (Doctor Who, Torchwood, and other audio dramas)
 
-**Metadata-URL:** [https://www.bigfinish.com/](https://www.bigfinish.com/)
+**Metadata provider:** [Big Finish](https://www.bigfinish.com/)
 
 ### Parameters
 
 #### Optional Parameters
 
-| Name    | Type | Validation | Description                                              |
-| ------- | ---- | ---------- | -------------------------------------------------------- |
-| `limit` | int  | 1-5        | Maximum number of results to return (default: 3, max: 5) |
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `limit` | int | 1-5 | 3 | Maximum number of results to return |
 
 ### Returned Fields
 
@@ -178,29 +244,30 @@ GET /bigfinish/search?title=example&author=author
 
 **ID:** `bookbeat`
 
-**Description:** Fetches metadata from BookBeat's public search API.
+**Description:** Fetches metadata from BookBeat's public search API
 
-**Metadata-URL:** [https://www.bookbeat.com/](https://www.bookbeat.com/)
+**Metadata provider:** [BookBeat](https://www.bookbeat.com/)
 
 ### Parameters
 
 #### Required Parameters
 
-| Name     | Type | Validation                                                                                                                                                                                                                                                                                | Description                                     |
-| -------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| `market` | enum | [austria, belgium, bulgaria, croatia, cyprus, czechia, denmark, estonia, finland, france, germany, greece, hungary, ireland, italy, latvia, lithuania, luxembourg, malta, netherlands, norway, poland, portugal, romania, slovakia, slovenia, spain, sweden, switzerland, united-kingdom] | Market/country for the search (BookBeat region) |
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `market` | enum | [austria, belgium, bulgaria, croatia, cyprus, czechia, denmark, estonia, finland, france, germany, greece, hungary, ireland, italy, latvia, lithuania, luxembourg, malta, netherlands, norway, poland, portugal, romania, slovakia, slovenia, spain, sweden, switzerland, united-kingdom] | - | Market/country for the search (BookBeat region) |
 
 #### Optional Parameters
 
-| Name                   | Type | Validation    | Description                                                                                          |
-| ---------------------- | ---- | ------------- | ---------------------------------------------------------------------------------------------------- |
-| `includeErotic`        | enum | [true, false] | Whether to include erotic books (default: false)                                                     |
-| `includeHighResCovers` | enum | [true, false] | Whether to include high resolution covers. This highly increases cover loading time (default: false) |
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `includeErotic` | enum | [true, false] | false | Whether to include erotic books |
+| `includeHighResCovers` | enum | [true, false] | false | Whether to include high resolution covers. This highly increases cover loading time |
 
 ### Returned Fields
 
 - `title`
 - `author`
+- `narrator`
 - `description`
 - `cover`
 - `isbn`
@@ -214,40 +281,23 @@ GET /bigfinish/search?title=example&author=author
 GET /bookbeat/market:austria/search?title=example&author=author
 ```
 
-### Add to Audiobookshelf
-
-```
-https://provider.vito0912.de/bookbeat/market:austria
-```
-
-Under "Auth" use `abs`
-
-For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
-
-> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
-
-### Comments
-
-- Data might be unrelated a bit.
-- There are made up to 4 requests per search, so consider ratelimiting if self-hosted! Please check you local laws regarding web scraping and API usage.
-
 ---
 
 ## Deezer
 
 **ID:** `deezer`
 
-**Description:** Fetches metadata from Deezer's music catalog.
+**Description:** Fetches metadata from Deezer's music catalog
 
-**Metadata-URL:** [https://www.deezer.com/](https://www.deezer.com/)
+**Metadata provider:** [Deezer](https://www.deezer.com/)
 
 ### Parameters
 
 #### Optional Parameters
 
-| Name    | Type | Validation | Description                                               |
-| ------- | ---- | ---------- | --------------------------------------------------------- |
-| `limit` | int  | 1-10       | Maximum number of results to return (default: 5, max: 10) |
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `limit` | int | 1-10 | 5 | Maximum number of results to return |
 
 ### Returned Fields
 
@@ -267,7 +317,7 @@ GET /deezer/search?title=example&author=author
 
 ### Comments
 
-- Use the `DEEZER_ACCESS_TOKEN` environment variable to provide a user OAuth token for higher rate limits.
+- An optional DEEZER_ACCESS_TOKEN can be configured.
 
 ---
 
@@ -275,17 +325,17 @@ GET /deezer/search?title=example&author=author
 
 **ID:** `dreifragezeichen`
 
-**Description:** Fetches metadata for the audiobook series 'Die drei ???'. Metadata is weekly from dreimetadaten.de.
+**Description:** Fetches metadata for the audiobook series 'Die drei ???'. Metadata is weekly from dreimetadaten.de
 
-**Metadata-URL:** [https://dreifragezeichen.de/](https://dreifragezeichen.de/)
+**Metadata provider:** [dreimetadaten](https://dreimetadaten.de/)
 
 ### Parameters
 
 #### Optional Parameters
 
-| Name    | Type | Validation | Description                                              |
-| ------- | ---- | ---------- | -------------------------------------------------------- |
-| `limit` | int  | 1-5        | Maximum number of results to return (default: 5, max: 5) |
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `limit` | int | 1-5 | 5 | Maximum number of results to return |
 
 ### Returned Fields
 
@@ -308,8 +358,7 @@ GET /dreifragezeichen/search?title=example&author=author
 
 ### Comments
 
-- Data provided by https://dreimetadaten.de
-- Does include the main series, some specials and kids series
+- Covers the main series, selected specials, and the kids series.
 
 ---
 
@@ -317,17 +366,17 @@ GET /dreifragezeichen/search?title=example&author=author
 
 **ID:** `elevenreader`
 
-**Description:** Fetches audiobook metadata from ElevenReader's public search and details APIs.
+**Description:** Fetches audiobook metadata from ElevenReader's public search and details APIs
 
-**Metadata-URL:** [https://elevenreader.io/](https://elevenreader.io/)
+**Metadata provider:** [ElevenReader](https://elevenreader.io/)
 
 ### Parameters
 
 #### Optional Parameters
 
-| Name | Type | Validation | Description |
-|------|------|------------|-------------|
-| `limit` | int | 1-10 | Maximum books from the first search page to fetch details for (default: 3) |
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `limit` | int | 1-10 | 3 | Maximum books from the first search page to fetch details for |
 
 ### Returned Fields
 
@@ -350,35 +399,25 @@ GET /dreifragezeichen/search?title=example&author=author
 GET /elevenreader/search?title=example&author=author
 ```
 
-### Add to Audiobookshelf
-
-```
-https://provider.vito0912.de/elevenreader
-```
-
-Under "Auth" use `abs`
-
-For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
-
-> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
-
 ---
 
 ## Goodreads
 
 **ID:** `goodreads`
 
-**Description:** Book metadata from Goodreads. Note: Covers may be low quality or missing. API is deprecated but still functional.
+**Description:** Book metadata from Goodreads. Note: Covers may be low quality or missing. API is deprecated but still functional
 
-**Metadata-URL:** [https://www.goodreads.com](https://www.goodreads.com)
+**Metadata provider:** [Goodreads](https://www.goodreads.com)
+
+**Inspiration:** [Source](https://github.com/ahobsonsayers/abs-tract)
 
 ### Parameters
 
 #### Optional Parameters
 
-| Name    | Type | Validation | Description                                                |
-| ------- | ---- | ---------- | ---------------------------------------------------------- |
-| `limit` | int  | 1-20       | Maximum number of results to return (default: 10, max: 20) |
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `limit` | int | 1-20 | 10 | Maximum number of results to return |
 
 ### Returned Fields
 
@@ -400,22 +439,9 @@ For deployments with authentication enabled, use the configured `AUTH_TOKEN` ins
 GET /goodreads/search?title=example&author=author
 ```
 
-### Add to Audiobookshelf
-
-```
-https://provider.vito0912.de/goodreads
-```
-
-Under "Auth" use `abs`
-
-For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
-
-> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
-
 ### Comments
 
-- Covers may be low quality or missing due to API limitations
-- Credits to https://github.com/ahobsonsayers/abs-tract
+- Requires an existing Goodreads API key; the public API is deprecated.
 
 ---
 
@@ -423,17 +449,19 @@ For deployments with authentication enabled, use the configured `AUTH_TOKEN` ins
 
 **ID:** `graphicaudio`
 
-**Description:** Fetches metadata from Graphic Audio's catalog. Graphic Audio produces dramatized audiobooks with full cast, music, and sound effects.
+**Description:** Fetches metadata from Graphic Audio's catalog. Graphic Audio produces dramatized audiobooks with full cast, music, and sound effects
 
-**Metadata-URL:** [https://www.graphicaudiointernational.net/](https://www.graphicaudiointernational.net/)
+**Metadata provider:** [Graphic Audio](https://www.graphicaudiointernational.net/)
+
+**Inspiration:** [Source](https://github.com/binyaminyblatt/graphicaudio_scraper)
 
 ### Parameters
 
 #### Optional Parameters
 
-| Name    | Type | Validation | Description                                                |
-| ------- | ---- | ---------- | ---------------------------------------------------------- |
-| `limit` | int  | 1-20       | Maximum number of results to return (default: 10, max: 20) |
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `limit` | int | 1-20 | 10 | Maximum number of results to return |
 
 ### Returned Fields
 
@@ -455,22 +483,6 @@ For deployments with authentication enabled, use the configured `AUTH_TOKEN` ins
 GET /graphicaudio/search?title=example&author=author
 ```
 
-### Add to Audiobookshelf
-
-```
-https://provider.vito0912.de/graphicaudio
-```
-
-Under "Auth" use `abs`
-
-For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
-
-> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
-
-### Comments
-
-- Credits to https://github.com/binyaminyblatt/graphicaudio_scraper
-
 ---
 
 ## Hardcover
@@ -479,23 +491,22 @@ For deployments with authentication enabled, use the configured `AUTH_TOKEN` ins
 
 **Description:** Book metadata from Hardcover.app
 
-**Metadata-URL:** [https://hardcover.app](https://hardcover.app)
+**Metadata provider:** [Hardcover](https://hardcover.app)
 
 ### Parameters
 
 #### Optional Parameters
 
-| Name       | Type   | Validation | Description                                                |
-| ---------- | ------ | ---------- | ---------------------------------------------------------- |
-| `language` | string | -          | Filter by language code (e.g., 'en', 'de')                 |
-| `limit`    | int    | 1-25       | Maximum number of results to return (default: 10, max: 25) |
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `language` | string | - | - | Filter by language code (e.g., 'en', 'de') |
+| `limit` | int | 1-25 | 10 | Maximum number of results to return |
 
 ### Returned Fields
 
 - `title`
 - `subtitle`
 - `author`
-- `narrator`
 - `description`
 - `cover`
 - `isbn`
@@ -505,6 +516,7 @@ For deployments with authentication enabled, use the configured `AUTH_TOKEN` ins
 - `language`
 - `series`
 - `tags`
+- `duration`
 
 ### Example Request
 
@@ -512,40 +524,24 @@ For deployments with authentication enabled, use the configured `AUTH_TOKEN` ins
 GET /hardcover/search?title=example&author=author
 ```
 
-### Add to Audiobookshelf
-
-```
-https://provider.vito0912.de/hardcover
-```
-
-Under "Auth" use `abs`
-
-For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
-
-> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
-
-### Comments
-
-- The searching seems to be a bit broken, not finding results that exist.
-
 ---
 
 ## LibriVox
 
 **ID:** `librivox`
 
-**Description:** Fetches metadata from LibriVox's public domain audiobook API. LibriVox provides free public domain audiobooks read by volunteers.
+**Description:** Fetches metadata from LibriVox's public domain audiobook API. LibriVox provides free public domain audiobooks read by volunteers
 
-**Metadata-URL:** [https://librivox.org/](https://librivox.org/)
+**Metadata provider:** [LibriVox](https://librivox.org/)
 
 ### Parameters
 
 #### Optional Parameters
 
-| Name    | Type   | Validation | Description                                                            |
-| ------- | ------ | ---------- | ---------------------------------------------------------------------- |
-| `genre` | string | -          | Filter results by genre (e.g., 'Fiction', 'Science Fiction', 'Poetry') |
-| `limit` | int    | 1-20       | Maximum number of results to return (default: 10, max: 20)             |
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `genre` | string | - | - | Filter results by genre (e.g., 'Fiction', 'Science Fiction', 'Poetry') |
+| `limit` | int | 1-20 | 10 | Maximum number of results to return |
 
 ### Returned Fields
 
@@ -568,7 +564,7 @@ GET /librivox/search?title=example&author=author
 
 ### Comments
 
-- Use ^ prefix in title/author/genre to anchor search to beginning of term
+- Prefix title, author, or genre with ^ to match the beginning of the term.
 
 ---
 
@@ -576,20 +572,20 @@ GET /librivox/search?title=example&author=author
 
 **ID:** `librofm`
 
-**Description:** Fetches metadata from Libro.fm, a DRM-free audiobook retailer.
+**Description:** Fetches metadata from Libro.fm, a DRM-free audiobook retailer
 
-**Metadata-URL:** [https://libro.fm](https://libro.fm)
+**Metadata provider:** [Libro.fm](https://libro.fm)
 
 ### Parameters
 
 #### Optional Parameters
 
-| Name          | Type | Validation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Description                                                                                          |
-| ------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `limit`       | int  | 1-6                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Maximum results to return                                                                            |
-| `searchby`    | enum | [all, titles, authors]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Field to search by (titles or authors). If not specified, defaults to searching by all.              |
-| `lang`        | enum | [all, cmn, bas, gem, ger, gsw, hai, yue, cpf, afr, alb, amh, ara, arm, asm, aze, baq, bel, ben, bos, bul, cat, chi, cze, dan, dut, eng, est, fin, fre, geo, gle, glg, gre, guj, hat, heb, hin, hrv, hun, ice, ind, ita, jav, jpn, kan, kaz, kir, kor, kur, lat, lav, lit, ltz, lug, mac, mal, mao, mar, may, mlg, mlt, nep, nno, nob, nor, oci, ori, pan, per, pol, por, rum, rus, san, sin, slo, slv, som, spa, srp, swa, swe, tam, tel, tgk, tgl, tha, tur, twi, ukr, urd, uzb, vie, yor, zha, zul] | Language of the audiobook searched for. If not specified, defaults to all (search in all languages). |
-| `ai_narrated` | enum | [true, false]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Whether to include AI-narrated audiobooks. Default is false.                                         |
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `limit` | int | 1-6 | 3 | Maximum results to return |
+| `searchby` | enum | [all, titles, authors] | all | Field to search by (titles or authors) |
+| `lang` | enum | [all, cmn, bas, gem, ger, gsw, hai, yue, cpf, afr, alb, amh, ara, arm, asm, aze, baq, bel, ben, bos, bul, cat, chi, cze, dan, dut, eng, est, fin, fre, geo, gle, glg, gre, guj, hat, heb, hin, hrv, hun, ice, ind, ita, jav, jpn, kan, kaz, kir, kor, kur, lat, lav, lit, ltz, lug, mac, mal, mao, mar, may, mlg, mlt, nep, nno, nob, nor, oci, ori, pan, per, pol, por, rum, rus, san, sin, slo, slv, som, spa, srp, swa, swe, tam, tel, tgk, tgl, tha, tur, twi, ukr, urd, uzb, vie, yor, zha, zul] | all | Language of the audiobook searched for |
+| `ai_narrated` | enum | [true, false] | false | Whether to include AI-narrated audiobooks |
 
 ### Returned Fields
 
@@ -614,9 +610,219 @@ GET /librivox/search?title=example&author=author
 GET /librofm/search?title=example&author=author
 ```
 
-### Comments
+---
 
-- Uses the unauthenticated and public Libro.fm API
+## Local catalog
+
+**ID:** `local`
+
+**Description:** Searches metadata already collected from enabled providers without upstream requests
+
+**Metadata provider:** Local metadata catalog
+
+### Parameters
+
+#### Optional Parameters
+
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `limit` | int | 1-50 | 10 | Maximum results |
+
+### Returned Fields
+
+- `title`
+- `author`
+- `narrator`
+- `description`
+- `cover`
+- `isbn`
+- `asin`
+- `series`
+- `duration`
+- `language`
+
+### Example Request
+
+```
+GET /local/search?title=example&author=author
+```
+
+---
+
+## Nextory
+
+**ID:** `nextory`
+
+**Description:** Fetches audiobook and ebook metadata from Nextory's public search API
+
+**Metadata provider:** [Nextory](https://nextory.com/)
+
+### Parameters
+
+#### Optional Parameters
+
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `type` | enum | [all, audiobook, ebook] | all | Content format. Use audiobook to exclude ebooks |
+| `includeErotic` | enum | [true, false] | true | Include books flagged is_adult_book by Nextory. Set false to exclude them |
+| `limit` | int | 1-12 | 12 | Maximum number of results |
+| `market` | enum | [DE, AT, CH, DK, ES, FI, FR, NL, NO, SE] | DE | Nextory country code |
+
+### Returned Fields
+
+- `title`
+- `author`
+- `narrator`
+- `description`
+- `cover`
+- `isbn`
+- `series`
+- `language`
+- `publishedYear`
+- `publisher`
+- `duration`
+
+### Example Request
+
+```
+GET /nextory/search?title=example&author=author
+```
+
+### Add to Audiobookshelf
+
+```
+https://provider.vito0912.de/nextory
+```
+
+Under "Auth" use `abs`
+
+For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
+
+> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
+
+---
+
+## OverDrive
+
+**ID:** `overdrive`
+
+**Description:** Fetches audiobook and ebook metadata from an OverDrive library
+
+**Metadata provider:** [OverDrive](https://www.overdrive.com/)
+
+### Parameters
+
+#### Required Parameters
+
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `library` | regex | `^[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?(?![\s\S])` | - | Library slug |
+
+#### Optional Parameters
+
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `type` | enum | [all, ebook, audiobook] | all | Content format |
+| `limit` | int | 1-24 | 3 | Maximum number of results |
+
+### Returned Fields
+
+- `title`
+- `subtitle`
+- `author`
+- `narrator`
+- `description`
+- `cover`
+- `isbn`
+- `publisher`
+- `publishedYear`
+- `language`
+- `duration`
+- `series`
+- `genres`
+
+### Example Request
+
+```
+GET /overdrive/library:example/search?title=example&author=author
+```
+
+---
+
+## Podium Entertainment
+
+**ID:** `podium`
+
+**Description:** Fetches book metadata from Podium Entertainment
+
+**Metadata provider:** [Podium Entertainment](https://podiumentertainment.com/)
+
+### Parameters
+
+#### Optional Parameters
+
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `limit` | int | 1-20 | 5 | Maximum number of results |
+
+### Returned Fields
+
+- `title`
+- `author`
+- `narrator`
+- `description`
+- `cover`
+- `isbn`
+- `publisher`
+- `publishedYear`
+- `language`
+- `duration`
+- `series`
+- `genres`
+
+### Example Request
+
+```
+GET /podium/search?title=example&author=author
+```
+
+---
+
+## Skoobe
+
+**ID:** `skoobe`
+
+**Description:** Fetches ebook and audiobook metadata from Skoobe's public website
+
+**Metadata provider:** [Skoobe](https://www.skoobe.de/)
+
+### Parameters
+
+#### Optional Parameters
+
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `limit` | int | 1-6 | 3 | Maximum number of results |
+| `type` | enum | [all, ebook, audiobook] | all | Content format |
+
+### Returned Fields
+
+- `title`
+- `subtitle`
+- `author`
+- `narrator`
+- `description`
+- `cover`
+- `language`
+- `publishedYear`
+- `publisher`
+- `duration`
+
+### Example Request
+
+```
+GET /skoobe/search?title=example&author=author
+```
 
 ---
 
@@ -624,13 +830,17 @@ GET /librofm/search?title=example&author=author
 
 **ID:** `soundbooththeater`
 
-**Description:** Soundbooth Theater
+**Description:** Audiobook metadata from Soundbooth Theater's public catalog
 
-**Metadata-URL:** [https://soundbooththeater.com](https://soundbooththeater.com)
+**Metadata provider:** [Soundbooth Theater](https://soundbooththeater.com)
 
 ### Parameters
 
-No parameters required.
+#### Optional Parameters
+
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `limit` | int | 1-20 | 10 | Maximum number of results |
 
 ### Returned Fields
 
@@ -643,7 +853,9 @@ No parameters required.
 - `duration`
 - `publishedYear`
 - `genres`
-- `subtitle`
+- `isbn`
+- `language`
+- `tags`
 
 ### Example Request
 
@@ -651,34 +863,30 @@ No parameters required.
 GET /soundbooththeater/search?title=example&author=author
 ```
 
-### Comments
-
-- The implementation of this provider is highly experimental and may not work reliably.
-
 ---
 
 ## Storytel
 
 **ID:** `storytel`
 
-**Description:** Fetches metadata from Storytel's public search API.
+**Description:** Fetches metadata from Storytel's public search API
 
-**Metadata-URL:** [https://www.storytel.com/](https://www.storytel.com/)
+**Metadata provider:** [Storytel](https://www.storytel.com/)
 
 ### Parameters
 
 #### Required Parameters
 
-| Name       | Type | Validation                                                                       | Description                                        |
-| ---------- | ---- | -------------------------------------------------------------------------------- | -------------------------------------------------- |
-| `language` | enum | [en, sv, no, dk, fi, is, de, es, fr, it, pl, nl, pt, bg, tr, ru, ar, hi, id, th] | Language/locale for the search (ISO language code) |
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `language` | enum | [en, sv, no, dk, fi, is, de, es, fr, it, pl, nl, pt, bg, tr, ru, ar, hi, id, th] | - | Language/locale for the search (ISO language code) |
 
 #### Optional Parameters
 
-| Name    | Type | Validation              | Description                                               |
-| ------- | ---- | ----------------------- | --------------------------------------------------------- |
-| `limit` | int  | 1-10                    | Maximum number of results to return (default: 3, max: 10) |
-| `type`  | enum | [audiobook, ebook, all] | Type of content to search for (default: all)              |
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `limit` | int | 1-10 | 3 | Maximum number of results to return |
+| `type` | enum | [audiobook, ebook, all] | all | Type of content to search for |
 
 ### Returned Fields
 
@@ -702,39 +910,23 @@ GET /soundbooththeater/search?title=example&author=author
 GET /storytel/language:en/search?title=example&author=author
 ```
 
-### Add to Audiobookshelf
-
-```
-https://provider.vito0912.de/storytel/language:en
-```
-
-Under "Auth" use `abs`
-
-For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
-
-> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
-
-### Comments
-
-- Titles and series information are automatically cleaned using language-specific patterns.
-
 ---
 
 ## The StoryGraph
 
 **ID:** `storygraph`
 
-**Description:** Fetches book metadata from The StoryGraph.
+**Description:** Fetches book metadata from The StoryGraph
 
-**Metadata-URL:** [https://app.thestorygraph.com](https://app.thestorygraph.com)
+**Metadata provider:** [The StoryGraph](https://app.thestorygraph.com)
 
 ### Parameters
 
 #### Optional Parameters
 
-| Name    | Type | Validation | Description                                              |
-| ------- | ---- | ---------- | -------------------------------------------------------- |
-| `limit` | int  | 1-5        | Maximum number of results to return (default: 3, max: 5) |
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `limit` | int | 1-5 | 3 | Maximum number of results to return |
 
 ### Returned Fields
 
@@ -753,9 +945,5 @@ For deployments with authentication enabled, use the configured `AUTH_TOKEN` ins
 ```
 GET /storygraph/search?title=example&author=author
 ```
-
-### Comments
-
-- Uses The StoryGraph's unauthenticated public turbo api
 
 ---

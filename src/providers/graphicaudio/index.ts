@@ -1,172 +1,69 @@
-import { BaseProvider } from '../BaseProvider'
-import { BookMetadata, ParsedParameters, ProviderConfig } from '../../types'
+import { storedCatalog } from '../../cache/catalog'
+import { normalizeBooks } from '../../metadata/normalize'
+import { bundleBooks } from '../../metadata/projection'
+import { selectMetadataBundle } from '../../metadata/bundle'
+import type { BookMetadata, MetadataBundle, MetadataQuery, ParsedParameters, ProviderConfig } from '../../types'
 import { normalizeBookMetadata } from '../../utils/helpers'
 import { httpClient } from '../../utils/httpClient'
-import path from 'path'
-import fs from 'fs'
-
-const configPath = path.join(__dirname, 'config.json')
-const config: ProviderConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
-
-const CACHE_DIR = path.join(process.cwd(), 'data')
-const CACHE_FILE = path.join(CACHE_DIR, 'graphicaudio_catalog.json')
-const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000
+import { BaseProvider } from '../BaseProvider'
+import { graphicAudioBookSchema } from './schemas'
+import type { GraphicAudioBook } from './types'
 
 const CATALOG_URLS = [
   'https://github.com/binyaminyblatt/graphicaudio_scraper/raw/refs/heads/main/results.json',
   'https://raw.githubusercontent.com/binyaminyblatt/graphicaudio_scraper/refs/heads/main/wayback_results.json'
 ]
 
-interface GraphicAudioBook {
-  link?: string
-  cover?: string
-  seriesName?: string
-  title?: string
-  rawtitle?: string
-  episodeNumber?: number
-  episodePart?: string
-  episodeCode?: string
-  totalParts?: string
-  subtitle?: string
-  author?: string
-  releaseDate?: string
-  isbn?: string
-  genre?: string
-  description?: string
-  copyright?: string
-  cast?: string[]
-  asin?: string
-}
-
 export default class GraphicAudioProvider extends BaseProvider {
-  private catalog: GraphicAudioBook[] | null = null
-  private catalogLoadedAt: number = 0
+  override readonly adapterVersion = 2
 
-  constructor() {
+  constructor(config: ProviderConfig) {
     super(config)
   }
 
-  private async loadCatalog(): Promise<GraphicAudioBook[]> {
-    const now = Date.now()
-
-    if (this.catalog && now - this.catalogLoadedAt < CACHE_MAX_AGE_MS) {
-      return this.catalog
-    }
-
-    if (!fs.existsSync(CACHE_DIR)) {
-      fs.mkdirSync(CACHE_DIR, { recursive: true })
-    }
-
-    let needsDownload = true
-    if (fs.existsSync(CACHE_FILE)) {
-      const stats = fs.statSync(CACHE_FILE)
-      const fileAge = now - stats.mtimeMs
-      if (fileAge < CACHE_MAX_AGE_MS) {
-        needsDownload = false
-      }
-    }
-
-    if (needsDownload) {
-      this.catalog = []
+  private async loadCatalog(): Promise<MetadataBundle> {
+    return storedCatalog(this.cacheIdentity, 'catalog', 86400000, async () => {
+      const catalog = new Map<string, BookMetadata>()
+      const fetchedAt = Date.now()
 
       for (const url of CATALOG_URLS) {
-        const response = await httpClient.get(url, {
-          headers: { Accept: 'application/json' },
-          responseType: 'text'
-        })
+        const response = await httpClient.get<unknown>(url)
+        if (response.status !== 200) throw new Error(`Graphic Audio catalog error: ${response.status}`)
 
-        if (response.status !== 200) {
-          if (fs.existsSync(CACHE_FILE)) {
-            const cachedData = fs.readFileSync(CACHE_FILE, 'utf-8')
-            this.catalog = this.parseAndValidateCatalog(cachedData)
-            this.catalogLoadedAt = now
-            return this.catalog
-          }
-          throw new Error(`Failed to download Graphic Audio catalog: ${response.status}`)
+        const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data
+        for (const record of graphicAudioBookSchema.array().max(50000).parse(data)) {
+          const book = { ...this.mapToMetadata(record), fetchedAt }
+          if (!book.title.trim()) continue
+          const key = book.bookId || JSON.stringify([book.title, book.author])
+          if (!catalog.has(key)) catalog.set(key, book)
         }
-
-        const rawData = typeof response.data === 'string' ? response.data : JSON.stringify(response.data)
-        this.catalog.push(...this.parseAndValidateCatalog(rawData))
       }
 
-      fs.writeFileSync(CACHE_FILE, JSON.stringify(this.catalog), 'utf-8')
-      this.catalogLoadedAt = now
-      return this.catalog
-    }
-
-    const cachedData = fs.readFileSync(CACHE_FILE, 'utf-8')
-    this.catalog = this.parseAndValidateCatalog(cachedData)
-    this.catalogLoadedAt = now
-    return this.catalog
+      return normalizeBooks([...catalog.values()], this.config.id, {})
+    })
   }
 
-  private parseAndValidateCatalog(data: string): GraphicAudioBook[] {
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(data)
-    } catch {
-      throw new Error('Invalid JSON in Graphic Audio catalog')
-    }
-
-    if (!Array.isArray(parsed)) {
-      throw new Error('Graphic Audio catalog is not an array')
-    }
-
-    return parsed
-      .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
-      .map((item) => this.sanitizeBook(item))
-  }
-
-  private sanitizeBook(item: Record<string, unknown>): GraphicAudioBook {
-    return {
-      link: this.sanitizeString(item.link),
-      cover: this.sanitizeString(item.cover),
-      seriesName: this.sanitizeString(item.seriesName),
-      title: this.sanitizeString(item.title),
-      rawtitle: this.sanitizeString(item.rawtitle),
-      episodeNumber: typeof item.episodeNumber === 'number' ? item.episodeNumber : undefined,
-      episodePart: this.sanitizeString(item.episodePart),
-      episodeCode: this.sanitizeString(item.episodeCode),
-      totalParts: this.sanitizeString(item.totalParts),
-      subtitle: this.sanitizeString(item.subtitle),
-      author: this.sanitizeString(item.author),
-      releaseDate: this.sanitizeString(item.releaseDate),
-      isbn: this.sanitizeString(item.isbn),
-      genre: this.sanitizeString(item.genre),
-      description: this.sanitizeString(item.description),
-      copyright: this.sanitizeString(item.copyright),
-      cast: Array.isArray(item.cast) ? item.cast.filter((c): c is string => typeof c === 'string') : undefined,
-      asin: this.sanitizeString(item.asin)
-    }
-  }
-
-  private sanitizeString(value: unknown): string | undefined {
-    if (typeof value !== 'string') return undefined
-    return value.trim() || undefined
-  }
-
-  async search(
-    title: string,
-    author: string | null,
-    params: ParsedParameters,
-    _options?: { skipCache?: boolean }
-  ): Promise<BookMetadata[]> {
+  protected override async searchEntities(query: MetadataQuery, params: ParsedParameters): Promise<MetadataBundle> {
     const limit = params.limit ? Number(params.limit) : 10
     const catalog = await this.loadCatalog()
 
-    const titleLower = title.toLowerCase()
-    const authorLower = author?.toLowerCase()
+    const titleLower = query.title.toLowerCase()
+    const authorLower = query.author?.toLowerCase()
 
-    const matches = catalog.filter((book) => {
+    const matches = bundleBooks(catalog).filter((book) => {
       if (!book.title) return false
 
       const bookTitle = book.title.toLowerCase()
-      const bookRawTitle = book.rawtitle?.toLowerCase() || ''
-      const bookSeries = book.seriesName?.toLowerCase() || ''
+      const bookSubtitle = book.subtitle?.toLowerCase() || ''
+      const bookSeries =
+        book.series
+          ?.map((series) => series.series)
+          .join(' ')
+          .toLowerCase() || ''
       const bookAuthor = book.author?.toLowerCase() || ''
 
       const titleMatch =
-        bookTitle.includes(titleLower) || bookRawTitle.includes(titleLower) || bookSeries.includes(titleLower)
+        bookTitle.includes(titleLower) || bookSubtitle.includes(titleLower) || bookSeries.includes(titleLower)
 
       if (!titleMatch) return false
 
@@ -177,17 +74,22 @@ export default class GraphicAudioProvider extends BaseProvider {
       return true
     })
 
-    return matches.slice(0, limit).map((book) => this.mapToMetadata(book))
+    const sourceIds = new Set(matches.slice(0, limit).map((book) => book.bookId))
+    const ids = catalog.entities
+      .filter((entity) => entity.kind === 'book' && sourceIds.has(entity.source.sourceId))
+      .map((entity) => entity.id)
+
+    return selectMetadataBundle(catalog, ids)
   }
 
-  async getBookById(bookId: string, _params: ParsedParameters): Promise<BookMetadata | null> {
-    const catalog = await this.loadCatalog()
+  async fetchBook(bookId: string, _params: ParsedParameters): Promise<BookMetadata | null> {
+    const catalog = bundleBooks(await this.loadCatalog())
 
-    const book = catalog.find((b) => b.isbn === bookId || b.asin === bookId)
+    const book = catalog.find((b) => b.bookId === bookId || b.isbn === bookId || b.asin === bookId)
 
     if (!book) return null
 
-    return this.mapToMetadata(book)
+    return book
   }
 
   private mapToMetadata(book: GraphicAudioBook): BookMetadata {
@@ -210,6 +112,8 @@ export default class GraphicAudioProvider extends BaseProvider {
 
     return normalizeBookMetadata({
       title: book.title,
+      bookId: book.link || book.isbn || book.asin,
+      format: 'audiobook',
       subtitle: book.subtitle,
       author: book.author,
       narrator: narrators?.join(', '),

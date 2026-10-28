@@ -1,0 +1,52 @@
+{
+  "id": "audiosilo",
+  "name": "AudioSilo Meta",
+  "provider": {
+    "name": "AudioSilo Meta",
+    "url": "https://meta.audiosilo.app/"
+  },
+  "available": true,
+  "addToAudiobookshelf": false,
+  "description": "Community audiobook metadata with works, narrators, series, identifiers, and chapter timings",
+  "url": "https://meta.audiosilo.app/",
+  "parameters": [
+    {
+      "name": "limit",
+      "required": false,
+      "validation": {
+        "type": "int",
+        "min": 1,
+        "max": 10
+      },
+      "description": "Maximum results",
+      "default": 5
+    },
+    {
+      "name": "region",
+      "required": false,
+      "validation": {
+        "type": "regex",
+        "pattern": "^[a-z]{2}$"
+      },
+      "description": "Preferred ASIN marketplace when a recording has several",
+      "default": "us"
+    }
+  ],
+  "returnedFields": [
+    "title",
+    "subtitle",
+    "author",
+    "narrator",
+    "description",
+    "cover",
+    "asin",
+    "isbn",
+    "publisher",
+    "publishedYear",
+    "language",
+    "duration",
+    "genres",
+    "series"
+  ],
+  "comments": []
+}

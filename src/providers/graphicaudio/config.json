@@ -1,9 +1,13 @@
 {
   "id": "graphicaudio",
   "name": "Graphic Audio",
+  "provider": {
+    "name": "Graphic Audio",
+    "url": "https://www.graphicaudiointernational.net/"
+  },
   "available": true,
-  "addToAudiobookshelf": true,
-  "description": "Fetches metadata from Graphic Audio's catalog. Graphic Audio produces dramatized audiobooks with full cast, music, and sound effects.",
+  "addToAudiobookshelf": false,
+  "description": "Fetches metadata from Graphic Audio's catalog. Graphic Audio produces dramatized audiobooks with full cast, music, and sound effects",
   "url": "https://www.graphicaudiointernational.net/",
   "parameters": [
     {
@@ -14,7 +18,8 @@
         "min": 1,
         "max": 20
       },
-      "description": "Maximum number of results to return (default: 10, max: 20)"
+      "description": "Maximum number of results to return",
+      "default": 10
     }
   ],
   "returnedFields": [
@@ -30,5 +35,10 @@
     "series",
     "publishedYear"
   ],
-  "comments": ["Credits to https://github.com/binyaminyblatt/graphicaudio_scraper"]
+  "comments": [],
+  "credits": [
+    {
+      "url": "https://github.com/binyaminyblatt/graphicaudio_scraper"
+    }
+  ]
 }

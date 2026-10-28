@@ -1,94 +1,30 @@
-export interface HardcoverImage {
-  url?: string
-}
+import type { z } from 'zod'
+import type {
+  hardcoverAuthorSchema,
+  hardcoverBookSchema,
+  hardcoverBookSeriesSchema,
+  hardcoverBooksResponseSchema,
+  hardcoverContributionSchema,
+  hardcoverEditionSchema,
+  hardcoverImageSchema,
+  hardcoverLanguageSchema,
+  hardcoverPublisherSchema,
+  hardcoverSearchResponseSchema,
+  hardcoverSeriesSchema,
+  hardcoverTagSchema,
+  hardcoverTaggingSchema
+} from './schemas'
 
-export interface HardcoverAuthor {
-  id?: number
-  name?: string
-  slug?: string
-}
-
-export interface HardcoverContribution {
-  author?: HardcoverAuthor
-  contribution?: string
-}
-
-export interface HardcoverSeries {
-  id?: number
-  name?: string
-  slug?: string
-}
-
-export interface HardcoverBookSeries {
-  series?: HardcoverSeries
-  position?: number | string
-}
-
-export interface HardcoverPublisher {
-  id?: number
-  name?: string
-}
-
-export interface HardcoverLanguage {
-  language?: string
-}
-
-export interface HardcoverTag {
-  tag?: string
-}
-
-export interface HardcoverTagging {
-  tag?: HardcoverTag
-}
-
-export interface HardcoverEdition {
-  id?: number
-  title?: string
-  subtitle?: string
-  isbn_10?: string
-  isbn_13?: string
-  asin?: string
-  pages?: number
-  audio_seconds?: number
-  release_date?: string
-  release_year?: number
-  description?: string
-  physical_format?: string
-  publisher?: HardcoverPublisher
-  language?: HardcoverLanguage
-  image?: HardcoverImage
-}
-
-export interface HardcoverBook {
-  id?: number
-  slug?: string
-  title?: string
-  subtitle?: string
-  description?: string
-  release_year?: number
-  release_date?: string
-  pages?: number
-  audio_seconds?: number
-  rating?: number
-  headline?: string
-  alternative_titles?: string[]
-  image?: HardcoverImage
-  contributions?: HardcoverContribution[]
-  book_series?: HardcoverBookSeries[]
-  taggings?: HardcoverTagging[]
-  default_audio_edition?: HardcoverEdition
-  default_physical_edition?: HardcoverEdition
-  default_cover_edition?: HardcoverEdition
-  editions?: HardcoverEdition[]
-}
-
-export interface HardcoverSearchResponse {
-  search?: {
-    ids?: (number | string)[]
-    results?: string
-  }
-}
-
-export interface HardcoverBooksResponse {
-  books?: HardcoverBook[]
-}
+export type HardcoverImage = z.infer<typeof hardcoverImageSchema>
+export type HardcoverAuthor = z.infer<typeof hardcoverAuthorSchema>
+export type HardcoverContribution = z.infer<typeof hardcoverContributionSchema>
+export type HardcoverSeries = z.infer<typeof hardcoverSeriesSchema>
+export type HardcoverBookSeries = z.infer<typeof hardcoverBookSeriesSchema>
+export type HardcoverPublisher = z.infer<typeof hardcoverPublisherSchema>
+export type HardcoverLanguage = z.infer<typeof hardcoverLanguageSchema>
+export type HardcoverTag = z.infer<typeof hardcoverTagSchema>
+export type HardcoverTagging = z.infer<typeof hardcoverTaggingSchema>
+export type HardcoverEdition = z.infer<typeof hardcoverEditionSchema>
+export type HardcoverBook = z.infer<typeof hardcoverBookSchema>
+export type HardcoverSearchResponse = z.infer<typeof hardcoverSearchResponseSchema>
+export type HardcoverBooksResponse = z.infer<typeof hardcoverBooksResponseSchema>

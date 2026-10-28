@@ -1,23 +1,46 @@
-import { AsyncLocalStorage } from 'async_hooks'
-import { Request, Response, NextFunction } from 'express'
+import { AsyncLocalStorage } from 'node:async_hooks'
+import type { Request, Response, NextFunction } from 'express'
+import type { CacheMode } from '../types'
 
-type ReqContext = {
-  skipCache?: boolean
+interface RequestContext {
+  cacheMode: CacheMode
+  partial: boolean
+  deadlineAt: number
 }
 
-const asyncLocalStorage = new AsyncLocalStorage<ReqContext>()
+const storage = new AsyncLocalStorage<RequestContext>()
 
-export function getSkipCacheFlag(): boolean {
-  return asyncLocalStorage.getStore()?.skipCache ?? false
+export function cacheMode(): CacheMode {
+  return storage.getStore()?.cacheMode || 'default'
 }
 
-export function runWithContext<T>(ctx: ReqContext, fn: () => T): T {
-  return asyncLocalStorage.run(ctx, fn)
+export function markPartialResult(): void {
+  const context = storage.getStore()
+  if (context) context.partial = true
+}
+
+export function isPartialResult(): boolean {
+  return storage.getStore()?.partial || false
+}
+
+export function runWithContext<T>(mode: CacheMode, callback: () => T): T {
+  const deadlineAt = storage.getStore()?.deadlineAt ?? Date.now() + 45000
+
+  return storage.run({ cacheMode: mode, partial: false, deadlineAt }, callback)
+}
+
+export function remainingRequestMs(): number {
+  const deadlineAt = storage.getStore()?.deadlineAt
+  if (deadlineAt === undefined) return 15000
+
+  return Math.max(0, deadlineAt - Date.now())
 }
 
 export function attachRequestContext(req: Request, _res: Response, next: NextFunction): void {
-  const skip = req.query.cache === 'false' || process.env.DISABLE_CACHE === 'true'
-  asyncLocalStorage.run({ skipCache: skip }, () => next())
+  let mode: CacheMode = 'default'
+  if (req.query.cache === 'refresh') mode = 'refresh'
+  if (req.query.cache === 'false' || process.env.SKIP_CACHE === 'true' || process.env.DISABLE_CACHE === 'true') {
+    mode = 'disabled'
+  }
+  runWithContext(mode, next)
 }
-
-export default asyncLocalStorage

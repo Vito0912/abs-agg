@@ -1,8 +1,12 @@
 {
   "id": "librofm",
   "name": "Libro.fm",
+  "provider": {
+    "name": "Libro.fm",
+    "url": "https://libro.fm"
+  },
   "available": true,
-  "description": "Fetches metadata from Libro.fm, a DRM-free audiobook retailer.",
+  "description": "Fetches metadata from Libro.fm, a DRM-free audiobook retailer",
   "url": "https://libro.fm",
   "parameters": [
     {
@@ -13,7 +17,8 @@
         "min": 1,
         "max": 6
       },
-      "description": "Maximum results to return"
+      "description": "Maximum results to return",
+      "default": 3
     },
     {
       "name": "searchby",
@@ -22,7 +27,8 @@
         "type": "enum",
         "values": ["all", "titles", "authors"]
       },
-      "description": "Field to search by (titles or authors). If not specified, defaults to searching by all."
+      "description": "Field to search by (titles or authors)",
+      "default": "all"
     },
     {
       "name": "lang",
@@ -129,7 +135,8 @@
           "zul"
         ]
       },
-      "description": "Language of the audiobook searched for. If not specified, defaults to all (search in all languages)."
+      "description": "Language of the audiobook searched for",
+      "default": "all"
     },
     {
       "name": "ai_narrated",
@@ -138,7 +145,8 @@
         "type": "enum",
         "values": ["true", "false"]
       },
-      "description": "Whether to include AI-narrated audiobooks. Default is false."
+      "description": "Whether to include AI-narrated audiobooks",
+      "default": "false"
     }
   ],
   "returnedFields": [
@@ -157,5 +165,5 @@
     "language",
     "duration"
   ],
-  "comments": ["Uses the unauthenticated and public Libro.fm API"]
+  "comments": []
 }

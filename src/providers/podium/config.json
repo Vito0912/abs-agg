@@ -1,0 +1,33 @@
+{
+  "id": "podium",
+  "name": "Podium Entertainment",
+  "provider": { "name": "Podium Entertainment", "url": "https://podiumentertainment.com/" },
+  "available": true,
+  "addToAudiobookshelf": false,
+  "description": "Fetches book metadata from Podium Entertainment",
+  "url": "https://podiumentertainment.com/",
+  "parameters": [
+    {
+      "name": "limit",
+      "required": false,
+      "default": 5,
+      "validation": { "type": "int", "min": 1, "max": 20 },
+      "description": "Maximum number of results"
+    }
+  ],
+  "returnedFields": [
+    "title",
+    "author",
+    "narrator",
+    "description",
+    "cover",
+    "isbn",
+    "publisher",
+    "publishedYear",
+    "language",
+    "duration",
+    "series",
+    "genres"
+  ],
+  "comments": []
+}

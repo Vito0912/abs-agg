@@ -1,25 +1,14 @@
-import { BaseProvider } from '../BaseProvider'
-import { BookMetadata, ParsedParameters, ProviderConfig } from '../../types'
+import { z } from 'zod'
+import { storedCatalog } from '../../cache/catalog'
+import { normalizeBooks } from '../../metadata/normalize'
+import { bundleBooks } from '../../metadata/projection'
+import { mergeMetadataBundles, selectMetadataBundle } from '../../metadata/bundle'
+import type { BookMetadata, MetadataBundle, MetadataQuery, ParsedParameters, ProviderConfig } from '../../types'
 import { normalizeBookMetadata } from '../../utils/helpers'
 import { httpClient } from '../../utils/httpClient'
-import {
-  CacheMeta,
-  DreifragData,
-  DreifragEpisode,
-  DreifragKidsData,
-  DreifragScoredItem,
-  DreifragSource,
-  DreifragSpezialData,
-  DreifragSpezialEpisode
-} from './types'
-import path from 'path'
-import fs from 'fs'
-
-const configPath = path.join(__dirname, 'config.json')
-const config: ProviderConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
-
-const CACHE_DIR = path.join(process.cwd(), 'data')
-const CHECK_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000
+import { BaseProvider } from '../BaseProvider'
+import { dreifragEpisodeSchema, dreifragSpezialEpisodeSchema } from './schemas'
+import type { DreifragEpisode, DreifragSource, DreifragSpezialEpisode } from './types'
 
 const SOURCES: { key: DreifragSource; url: string; dataField: string }[] = [
   { key: 'serie', url: 'https://dreimetadaten.de/data/Serie.json', dataField: 'serie' },
@@ -27,87 +16,40 @@ const SOURCES: { key: DreifragSource; url: string; dataField: string }[] = [
   { key: 'kids', url: 'https://dreimetadaten.de/data/Kids.json', dataField: 'kids' }
 ]
 
-function cachePaths(key: DreifragSource): { data: string; meta: string } {
-  return {
-    data: path.join(CACHE_DIR, `dreifragezeichen_${key}.json`),
-    meta: path.join(CACHE_DIR, `dreifragezeichen_${key}_meta.json`)
-  }
-}
-
 export default class DreifragezeichenProvider extends BaseProvider {
-  private collections: Record<DreifragSource, (DreifragEpisode | DreifragSpezialEpisode)[]> = {
-    serie: [],
-    spezial: [],
-    kids: []
-  }
-  private loadedAt: Record<DreifragSource, number> = { serie: 0, spezial: 0, kids: 0 }
+  override readonly adapterVersion = 2
 
-  constructor() {
+  constructor(config: ProviderConfig) {
     super(config)
   }
 
-  private async loadCollection(source: DreifragSource): Promise<void> {
-    const now = Date.now()
+  private async loadCollection(source: DreifragSource): Promise<MetadataBundle> {
+    const definition = SOURCES.find((entry) => entry.key === source)
+    if (!definition) throw new Error(`Unknown collection: ${source}`)
 
-    if (this.collections[source].length > 0 && now - this.loadedAt[source] < CHECK_INTERVAL_MS) {
-      return
-    }
+    const schema = dreifragEpisodeSchema.or(dreifragSpezialEpisodeSchema).array().max(50000)
+    const bundle = await storedCatalog(this.cacheIdentity, source, 7 * 86400000, async (): Promise<MetadataBundle> => {
+      const response = await httpClient.get<unknown>(definition.url)
+      if (response.status !== 200) throw new Error(`Die drei ??? catalog error: ${response.status}`)
 
-    if (!fs.existsSync(CACHE_DIR)) {
-      fs.mkdirSync(CACHE_DIR, { recursive: true })
-    }
+      const data = z.record(z.string(), z.unknown()).parse(response.data)
+      const episodes = schema.parse(data[definition.dataField])
+      const fetchedAt = Date.now()
+      const books = episodes.map((episode) => ({ ...this.mapToMetadata(episode, source), fetchedAt }))
 
-    const { data: dataFile, meta: metaFile } = cachePaths(source)
-    const { url, dataField } = SOURCES.find((s) => s.key === source)!
+      return normalizeBooks(books, this.config.id, {})
+    })
 
-    let meta: CacheMeta = { lastChecked: 0 }
-    if (fs.existsSync(metaFile)) {
-      try {
-        meta = JSON.parse(fs.readFileSync(metaFile, 'utf-8'))
-      } catch {
-        meta = { lastChecked: 0 }
-      }
-    }
-
-    const fileExists = fs.existsSync(dataFile)
-    const weekElapsed = now - meta.lastChecked >= CHECK_INTERVAL_MS
-
-    if (!fileExists || weekElapsed) {
-      try {
-        const headResponse = await httpClient.head(url)
-        const remoteEtag = headResponse.headers['etag'] as string | undefined
-        const etagChanged = remoteEtag && remoteEtag !== meta.etag
-
-        if (!fileExists || etagChanged) {
-          const response = await httpClient.get<DreifragData | DreifragSpezialData | DreifragKidsData>(url, {
-            headers: { Accept: 'application/json' },
-            responseType: 'json'
-          })
-
-          if (response.status === 200 && response.data && dataField in response.data) {
-            fs.writeFileSync(dataFile, JSON.stringify(response.data), 'utf-8')
-          } else if (!fileExists) {
-            throw new Error(`Failed to download Die drei ??? ${source} data: HTTP ${response.status}`)
-          }
-        }
-
-        meta.etag = remoteEtag ?? meta.etag
-        meta.lastChecked = now
-        fs.writeFileSync(metaFile, JSON.stringify(meta), 'utf-8')
-      } catch (err) {
-        if (!fileExists) throw err
-        console.error(`DreifragezeichenProvider: failed to check for ${source} updates, using cached data:`, err)
-      }
-    }
-
-    const raw = fs.readFileSync(dataFile, 'utf-8')
-    const parsed = JSON.parse(raw)
-    this.collections[source] = Array.isArray(parsed[dataField]) ? parsed[dataField] : []
-    this.loadedAt[source] = now
+    return bundle
   }
 
-  private async loadAll(): Promise<void> {
-    await Promise.all(SOURCES.map((s) => this.loadCollection(s.key)))
+  private async loadAll(): Promise<{ source: DreifragSource; bundle: MetadataBundle; books: BookMetadata[] }[]> {
+    return Promise.all(
+      SOURCES.map(async ({ key }) => {
+        const bundle = await this.loadCollection(key)
+        return { source: key, bundle, books: bundleBooks(bundle) }
+      })
+    )
   }
 
   private normalizeStr(s: string): string {
@@ -127,10 +69,10 @@ export default class DreifragezeichenProvider extends BaseProvider {
     return match ? parseInt(match[1], 10) : null
   }
 
-  private scoreEpisode(query: string, ep: DreifragEpisode | DreifragSpezialEpisode, source: DreifragSource): number {
+  private scoreEpisode(query: string, book: BookMetadata, source: DreifragSource): number {
     let score = 0
     const queryNorm = this.normalizeStr(query)
-    const titleNorm = this.normalizeStr(ep.titel ?? '')
+    const titleNorm = this.normalizeStr(book.title)
     const sourceKeyword: Record<DreifragSource, string> = { serie: 'serie', spezial: 'spezial', kids: 'kids' }
 
     if (queryNorm.includes(sourceKeyword[source])) {
@@ -142,7 +84,8 @@ export default class DreifragezeichenProvider extends BaseProvider {
       score -= 200
     }
 
-    const nummer = (ep as DreifragEpisode).nummer ?? null
+    const sequence = book.series?.[0]?.sequence
+    const nummer = sequence === undefined ? null : Number(sequence)
     const queryNumber = this.extractNumber(queryNorm)
     if (queryNumber !== null && nummer !== null) {
       if (queryNumber === nummer) {
@@ -158,7 +101,7 @@ export default class DreifragezeichenProvider extends BaseProvider {
         : source === 'spezial'
           ? 'die drei fragezeichen spezial'
           : 'die drei fragezeichen kids'
-    const fullTitleNorm = this.normalizeStr(`${prefix} ${nummer ?? ''} ${ep.titel}`)
+    const fullTitleNorm = this.normalizeStr(`${prefix} ${nummer ?? ''} ${book.title}`)
 
     if (titleNorm.includes(queryNorm) || fullTitleNorm.includes(queryNorm)) {
       score += 200
@@ -182,45 +125,50 @@ export default class DreifragezeichenProvider extends BaseProvider {
     return score
   }
 
-  async search(
-    title: string,
-    _author: string | null,
-    params: ParsedParameters,
-    _options?: { skipCache?: boolean }
-  ): Promise<BookMetadata[]> {
+  protected override async searchEntities(query: MetadataQuery, params: ParsedParameters): Promise<MetadataBundle> {
     const limit = params.limit ? Number(params.limit) : 5
-    await this.loadAll()
+    const collections = await this.loadAll()
+    const scored: { score: number; book: BookMetadata }[] = []
 
-    const scored: DreifragScoredItem[] = []
-    for (const { key } of SOURCES) {
-      for (const ep of this.collections[key]) {
-        const score = this.scoreEpisode(title, ep, key)
-        if (score > 0) {
-          scored.push({ source: key, score, ep })
-        }
+    for (const { source, books } of collections) {
+      for (const book of books) {
+        const score = this.scoreEpisode(query.title, book, source)
+        if (score > 0) scored.push({ score, book })
       }
     }
 
-    scored.sort((a, b) => b.score - a.score)
-    return scored.slice(0, limit).map(({ ep, source }) => this.mapToMetadata(ep, source))
+    scored.sort((left, right) => right.score - left.score)
+    const catalog = mergeMetadataBundles(collections.map(({ bundle }) => bundle))
+    const sourceIds = new Map<string, string>()
+    for (const entity of catalog.entities) {
+      if (entity.kind === 'book') sourceIds.set(entity.source.sourceId, entity.id)
+    }
+
+    const matches = scored.slice(0, limit).flatMap(({ book }) => {
+      const id = book.bookId ? sourceIds.get(book.bookId) : undefined
+      return id ? [id] : []
+    })
+
+    return selectMetadataBundle(catalog, matches)
   }
 
-  async getBookById(bookId: string, _params: ParsedParameters): Promise<BookMetadata | null> {
-    await this.loadAll()
-
-    for (const { key } of SOURCES) {
-      const ep = this.collections[key].find((e) => {
-        const numbered = e as DreifragEpisode
-        return numbered.nummer !== undefined ? String(numbered.nummer) === bookId : false
-      })
-      if (ep) return this.mapToMetadata(ep, key)
+  async fetchBook(bookId: string, _params: ParsedParameters): Promise<BookMetadata | null> {
+    const collections = await this.loadAll()
+    for (const { books } of collections) {
+      const book = books.find((entry) => entry.bookId === bookId)
+      if (book) return book
     }
 
     return null
   }
 
+  private episodeId(episode: DreifragEpisode | DreifragSpezialEpisode, source: DreifragSource): string {
+    const localId = 'nummer' in episode ? String(episode.nummer) : episode.links?.json || episode.titel
+    return `${source}:${localId}`
+  }
+
   private mapToMetadata(ep: DreifragEpisode | DreifragSpezialEpisode, source: DreifragSource): BookMetadata {
-    const nummer = (ep as DreifragEpisode).nummer
+    const nummer = 'nummer' in ep ? ep.nummer : undefined
     const seriesName =
       source === 'serie' ? 'Die drei ???' : source === 'spezial' ? 'Die drei ??? Spezial' : 'Die drei ??? Kids'
 
@@ -241,12 +189,20 @@ export default class DreifragezeichenProvider extends BaseProvider {
       if (/^\d{4}$/.test(year)) publishedYear = year
     }
 
-    const duration = ep.gesamtdauer ? Math.round(ep.gesamtdauer / 1000) : undefined
+    const durationSeconds = ep.gesamtdauer === undefined ? undefined : ep.gesamtdauer / 1000
     const cover = ep.links?.cover_itunes
     const seriesEntry = nummer !== undefined ? { series: seriesName, sequence: String(nummer) } : { series: seriesName }
 
     return normalizeBookMetadata({
       title: fullTitle,
+      bookId: this.episodeId(ep, source),
+      format: 'audiobook',
+      chapters: ep.kapitel?.map((chapter, index) => ({
+        title: chapter.titel,
+        sequence: index + 1,
+        startSeconds: chapter.start / 1000,
+        endSeconds: chapter.end / 1000
+      })),
       subtitle,
       author: ep.autor,
       narrator,
@@ -254,7 +210,7 @@ export default class DreifragezeichenProvider extends BaseProvider {
       cover,
       publishedYear,
       series: [seriesEntry],
-      duration: duration !== undefined ? duration / 60 : undefined,
+      durationSeconds,
       language: 'de',
       poweredBy: 'dreimetadaten.de'
     })

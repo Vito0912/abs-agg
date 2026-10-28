@@ -1,14 +1,10 @@
-import { BaseProvider } from '../BaseProvider'
-import { BookMetadata, ParsedParameters, ProviderConfig } from '../../types'
-import { normalizeBookMetadata } from '../../utils/helpers'
-import { dbManager } from '../../database/manager'
-import { httpClient } from '../../utils/httpClient'
+import { mapConcurrent } from '../../utils/concurrency'
 import * as cheerio from 'cheerio'
-import fs from 'fs'
-import path from 'path'
-
-const configPath = path.join(__dirname, 'config.json')
-const config: ProviderConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+import type { BookMetadata, ParsedParameters, ProviderConfig } from '../../types'
+import { normalizeBookMetadata } from '../../utils/helpers'
+import { httpClient } from '../../utils/httpClient'
+import { BaseProvider } from '../BaseProvider'
+import type { StoryGraphSearchResult } from './types'
 
 const BASE_URL = 'https://app.thestorygraph.com'
 const PAGE_HEADERS = {
@@ -19,24 +15,12 @@ const PAGE_HEADERS = {
   'X-Requested-With': 'com.thestorygraph.thestorygraph'
 }
 
-interface StoryGraphSearchResult {
-  id: string
-  title: string
-  author?: string
-  cover?: string
-}
-
 export default class StoryGraphProvider extends BaseProvider {
-  constructor() {
+  constructor(config: ProviderConfig) {
     super(config)
   }
 
-  async search(
-    title: string,
-    author: string | null,
-    params: ParsedParameters,
-    options?: { skipCache?: boolean }
-  ): Promise<BookMetadata[]> {
+  async searchBooks(title: string, author: string | null, params: ParsedParameters): Promise<BookMetadata[]> {
     const limit = Math.min(Number(params.limit) || 3, 5)
     const searchTerm = author ? `${title} ${author}` : title
     const response = await httpClient.get(`${BASE_URL}/search`, {
@@ -49,23 +33,22 @@ export default class StoryGraphProvider extends BaseProvider {
     if (response.status !== 200) throw new Error(`The StoryGraph search error: ${response.status}`)
 
     const results = this.parseSearchResults(String(response.data)).slice(0, limit)
-    const books: BookMetadata[] = []
-
-    for (const result of results) {
-      try {
-        const details = await this.fetchBook(result.id, options?.skipCache === true)
-        books.push(details || this.mapSearchResult(result))
-      } catch (error) {
-        console.error(`Failed to fetch The StoryGraph book ${result.id}:`, error)
-        books.push(this.mapSearchResult(result))
-      }
-    }
-
-    return books
+    return mapConcurrent(results, 3, (result) => this.loadSearchResult(result, params))
   }
 
-  async getBookById(bookId: string, _params: ParsedParameters): Promise<BookMetadata | null> {
-    return this.fetchBook(bookId, false)
+  private async loadSearchResult(result: StoryGraphSearchResult, params: ParsedParameters): Promise<BookMetadata> {
+    try {
+      const details = await this.getBookById(result.id, params)
+      return details || this.mapSearchResult(result)
+    } catch (error) {
+      console.error(`Failed to fetch The StoryGraph book ${result.id}:`, error)
+      return this.mapSearchResult(result)
+    }
+  }
+
+  async fetchBook(bookId: string, _params: ParsedParameters): Promise<BookMetadata | null> {
+    const book = await this.fetchDetails(bookId)
+    return book ? { ...book, bookId } : null
   }
 
   private parseSearchResults(html: string): StoryGraphSearchResult[] {
@@ -88,16 +71,7 @@ export default class StoryGraphProvider extends BaseProvider {
     return results
   }
 
-  private async fetchBook(bookId: string, skipCache: boolean): Promise<BookMetadata | null> {
-    if (!skipCache) {
-      const cached = dbManager.getBookCache(this.config.id, bookId)
-      if (cached) {
-        try {
-          return JSON.parse(cached) as BookMetadata
-        } catch {}
-      }
-    }
-
+  private async fetchDetails(bookId: string): Promise<BookMetadata | null> {
     const response = await httpClient.get(`${BASE_URL}/books/${encodeURIComponent(bookId)}`, {
       headers: PAGE_HEADERS,
       responseType: 'text'
@@ -106,7 +80,6 @@ export default class StoryGraphProvider extends BaseProvider {
     if (response.status !== 200) throw new Error(`The StoryGraph book details error: ${response.status}`)
 
     const metadata = this.parseBookDetails(String(response.data))
-    if (metadata) dbManager.setBookCache(this.config.id, bookId, JSON.stringify(metadata))
     return metadata
   }
 
@@ -134,6 +107,7 @@ export default class StoryGraphProvider extends BaseProvider {
 
     const metadata = normalizeBookMetadata({
       title,
+      metadataKind: 'book',
       author: author || undefined,
       publisher: editionFields.get('Publisher') || undefined,
       publishedYear,
@@ -214,6 +188,9 @@ export default class StoryGraphProvider extends BaseProvider {
   private mapSearchResult(result: StoryGraphSearchResult): BookMetadata {
     const metadata = normalizeBookMetadata({
       title: result.title,
+      bookId: result.id,
+      quality: 'summary',
+      metadataKind: 'book',
       author: result.author,
       cover: result.cover,
       poweredBy: 'The StoryGraph'

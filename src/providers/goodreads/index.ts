@@ -1,14 +1,10 @@
-import { BaseProvider } from '../BaseProvider'
-import { BookMetadata, ParsedParameters, ProviderConfig } from '../../types'
-import { normalizeBookMetadata } from '../../utils/helpers'
-import { dbManager } from '../../database/manager'
-import { httpClient } from '../../utils/httpClient'
-import path from 'path'
-import fs from 'fs'
+import { mapConcurrent } from '../../utils/concurrency'
 import * as cheerio from 'cheerio'
-
-const configPath = path.join(__dirname, 'config.json')
-const config: ProviderConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+import type { BookMetadata, ParsedParameters, ProviderConfig, Contributor, SeriesMetadata, Rating } from '../../types'
+import { normalizeBookMetadata } from '../../utils/helpers'
+import { httpClient } from '../../utils/httpClient'
+import { BaseProvider } from '../BaseProvider'
+import type { GoodreadsSearchResult } from './types'
 
 const GOODREADS_API_URL = 'https://www.goodreads.com'
 
@@ -62,29 +58,16 @@ const GENRE_SHELVES = new Set([
   'young-adult'
 ])
 
-interface GoodreadsSearchResult {
-  id: string
-  title: string
-  authorName: string
-  imageUrl?: string
-}
-
 export default class GoodreadsProvider extends BaseProvider {
   private apiKey: string
 
-  constructor() {
+  constructor(config: ProviderConfig) {
     super(config)
     this.apiKey = process.env.GOODREADS_API_KEY || ''
   }
 
-  async search(
-    title: string,
-    author: string | null,
-    params: ParsedParameters,
-    options?: { skipCache?: boolean }
-  ): Promise<BookMetadata[]> {
+  async searchBooks(title: string, author: string | null, params: ParsedParameters): Promise<BookMetadata[]> {
     const limit = params.limit ? Number(params.limit) : 10
-    const skipCache = options?.skipCache === true
 
     const searchUrl = `${GOODREADS_API_URL}/search/index.xml?key=${this.apiKey}&q=${encodeURIComponent(title)}&search[field]=title`
 
@@ -114,19 +97,12 @@ export default class GoodreadsProvider extends BaseProvider {
     }
 
     const bookIds = sortedResults.slice(0, limit).map((r) => r.id)
-    const books = await this.fetchBookDetails(bookIds, skipCache)
+    const books = await this.fetchBookDetails(bookIds, params)
 
     return books
   }
 
-  async getBookById(bookId: string, _params: ParsedParameters): Promise<BookMetadata | null> {
-    const cachedBook = dbManager.getBookCache(this.config.id, bookId)
-    if (cachedBook) {
-      try {
-        return JSON.parse(cachedBook) as BookMetadata
-      } catch {}
-    }
-
+  async fetchBook(bookId: string, _params: ParsedParameters): Promise<BookMetadata | null> {
     const bookUrl = `${GOODREADS_API_URL}/book/show.xml?key=${this.apiKey}&id=${encodeURIComponent(bookId)}`
 
     const response = await httpClient.get(bookUrl, {
@@ -140,10 +116,6 @@ export default class GoodreadsProvider extends BaseProvider {
 
     const xmlData = typeof response.data === 'string' ? response.data : String(response.data)
     const metadata = this.parseBookDetails(xmlData)
-
-    if (metadata) {
-      dbManager.setBookCache(this.config.id, bookId, JSON.stringify(metadata))
-    }
 
     return metadata
   }
@@ -190,37 +162,10 @@ export default class GoodreadsProvider extends BaseProvider {
     })
   }
 
-  private async fetchBookDetails(bookIds: string[], skipCache: boolean): Promise<BookMetadata[]> {
-    const books: BookMetadata[] = []
+  private async fetchBookDetails(bookIds: string[], params: ParsedParameters): Promise<BookMetadata[]> {
+    const books = await mapConcurrent(bookIds, 3, (id) => this.getBookById(id, params))
 
-    for (const bookId of bookIds) {
-      const cachedBook = !skipCache ? dbManager.getBookCache(this.config.id, bookId) : null
-      if (cachedBook) {
-        try {
-          books.push(JSON.parse(cachedBook) as BookMetadata)
-          continue
-        } catch {}
-      }
-
-      const bookUrl = `${GOODREADS_API_URL}/book/show.xml?key=${this.apiKey}&id=${encodeURIComponent(bookId)}`
-
-      const response = await httpClient.get(bookUrl, {
-        headers: { Accept: 'application/xml' },
-        responseType: 'text'
-      })
-
-      if (response.status !== 200) continue
-
-      const xmlData = typeof response.data === 'string' ? response.data : String(response.data)
-      const metadata = this.parseBookDetails(xmlData)
-
-      if (metadata) {
-        books.push(metadata)
-        dbManager.setBookCache(this.config.id, bookId, JSON.stringify(metadata))
-      }
-    }
-
-    return books
+    return books.filter((book): book is BookMetadata => book !== null)
   }
 
   private parseBookDetails(xmlData: string): BookMetadata | null {
@@ -250,37 +195,15 @@ export default class GoodreadsProvider extends BaseProvider {
 
     const originalPubYear = $book.find('work original_publication_year').first().text().trim()
     const pubYear = $book.children('publication_year').first().text().trim()
-    const publishedYear = originalPubYear || pubYear
-
-    const series: { series: string; sequence?: string }[] = []
-    $book.find('series_works series_work').each((_, sw) => {
-      const $sw = $(sw)
-      const seriesTitle = $sw.find('series title').first().text().trim()
-      const position = $sw.children('user_position').first().text().trim()
-      if (seriesTitle) {
-        series.push({
-          series: seriesTitle,
-          sequence: position || undefined
-        })
-      }
-    })
-
-    const genres: string[] = []
-    $book.find('popular_shelves shelf').each((_, shelf) => {
-      if (genres.length >= 3) return
-      const name = $(shelf).attr('name')?.toLowerCase()
-      if (name && GENRE_SHELVES.has(name)) {
-        const genre = name
-          .split('-')
-          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ')
-        genres.push(genre)
-      }
-    })
+    const publishedYear = pubYear
 
     return normalizeBookMetadata({
       title,
+      bookId: $book.children('id').first().text().trim(),
+      work: this.parseWork($, $book, title, originalPubYear),
+      format: this.parseFormat($book.children('format').first().text()),
       subtitle: subtitle || undefined,
+      contributors: this.parseContributors($, $book),
       author: authorName || undefined,
       description: description || undefined,
       cover: imageUrl || undefined,
@@ -288,9 +211,98 @@ export default class GoodreadsProvider extends BaseProvider {
       publisher: publisher || undefined,
       publishedYear: publishedYear || undefined,
       language: languageCode || undefined,
-      series: series.length > 0 ? series : undefined,
-      genres: genres.length > 0 ? genres : undefined
+      series: this.parseSeries($, $book),
+      genres: this.parseGenres($, $book)
     })
+  }
+
+  private parseWork(
+    _$: cheerio.CheerioAPI,
+    book: ReturnType<cheerio.CheerioAPI>,
+    title: string,
+    publishedYear: string
+  ): BookMetadata['work'] {
+    const id = book.find('work id').first().text().trim()
+    if (!id) return undefined
+
+    const value = Number(book.children('average_rating').text())
+    const count = Number(book.children('ratings_count').text())
+    const ratings: Rating[] = []
+
+    if (value > 0 && value <= 5) {
+      ratings.push({
+        source: 'goodreads',
+        value,
+        minimum: 0,
+        maximum: 5,
+        aspect: 'overall',
+        ratingCount: Number.isInteger(count) && count >= 0 ? count : undefined
+      })
+    }
+
+    const originalTitle = book.find('work original_title').first().text().trim()
+
+    return { id, title: originalTitle || title, publishedYear: publishedYear || undefined, ratings }
+  }
+
+  private parseContributors($: cheerio.CheerioAPI, book: ReturnType<cheerio.CheerioAPI>): Contributor[] {
+    return book
+      .find('authors author')
+      .toArray()
+      .flatMap((element) => {
+        const author = $(element)
+        const name = author.find('name').first().text().trim()
+        const sourceId = author.children('id').first().text().trim()
+        if (!name) return []
+
+        return [{ name, role: 'author', sourceId: sourceId || undefined }]
+      })
+  }
+
+  private parseSeries($: cheerio.CheerioAPI, book: ReturnType<cheerio.CheerioAPI>): SeriesMetadata[] {
+    const series: SeriesMetadata[] = []
+
+    book.find('series_works series_work').each((_, element) => {
+      const membership = $(element)
+      const name = membership.find('series title').first().text().trim()
+      if (!name) return
+
+      series.push({
+        series: name,
+        sourceId: membership.find('series id').first().text().trim() || undefined,
+        sequence: membership.children('user_position').first().text().trim() || undefined
+      })
+    })
+
+    return series
+  }
+
+  private parseGenres($: cheerio.CheerioAPI, book: ReturnType<cheerio.CheerioAPI>): string[] {
+    const genres: string[] = []
+
+    book.find('popular_shelves shelf').each((_, shelf) => {
+      if (genres.length >= 3) return
+
+      const name = $(shelf).attr('name')?.toLowerCase()
+      if (!name || !GENRE_SHELVES.has(name)) return
+
+      const label = name
+        .split('-')
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
+      genres.push(label)
+    })
+
+    return genres
+  }
+
+  private parseFormat(value: string): 'audiobook' | 'ebook' | undefined {
+    const format = value.trim().toLowerCase()
+
+    if (['audible audio', 'audiobook', 'audio cd', 'mp3 cd', 'audio cassette'].includes(format)) return 'audiobook'
+    if (['ebook', 'kindle edition', 'nook', 'ebook format'].includes(format)) return 'ebook'
+
+    return undefined
   }
 
   private extractTitle(fullTitle: string): string {

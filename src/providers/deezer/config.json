@@ -1,8 +1,12 @@
 {
   "id": "deezer",
   "name": "Deezer",
+  "provider": {
+    "name": "Deezer",
+    "url": "https://www.deezer.com/"
+  },
   "available": true,
-  "description": "Fetches metadata from Deezer's music catalog.",
+  "description": "Fetches metadata from Deezer's music catalog",
   "url": "https://www.deezer.com/",
   "parameters": [
     {
@@ -13,19 +17,10 @@
         "min": 1,
         "max": 10
       },
-      "description": "Maximum number of results to return (default: 5, max: 10)"
+      "description": "Maximum number of results to return",
+      "default": 5
     }
   ],
-  "returnedFields": [
-    "title",
-    "author",
-    "cover",
-    "publisher",
-    "publishedYear",
-    "genres",
-    "duration"
-  ],
-  "comments": [
-    "Use the `DEEZER_ACCESS_TOKEN` environment variable to provide a user OAuth token for higher rate limits."
-  ]
+  "returnedFields": ["title", "author", "cover", "publisher", "publishedYear", "genres", "duration"],
+  "comments": ["An optional DEEZER_ACCESS_TOKEN can be configured."]
 }

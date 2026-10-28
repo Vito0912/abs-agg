@@ -1,9 +1,13 @@
 {
   "id": "audioteka",
   "name": "Audioteka",
+  "provider": {
+    "name": "Audioteka",
+    "url": "https://audioteka.com/"
+  },
   "available": true,
-  "addToAudiobookshelf": true,
-  "description": "Fetches audiobook metadata from Audioteka, a popular audiobook platform in Central and Eastern Europe.",
+  "addToAudiobookshelf": false,
+  "description": "Fetches audiobook metadata from Audioteka, a popular audiobook platform in Central and Eastern Europe",
   "url": "https://audioteka.com/",
   "parameters": [
     {
@@ -23,7 +27,8 @@
         "min": 1,
         "max": 20
       },
-      "description": "Maximum number of results to return (default: 5, max: 20)"
+      "description": "Maximum number of results to return",
+      "default": 5
     }
   ],
   "returnedFields": [
@@ -39,5 +44,10 @@
     "language",
     "duration"
   ],
-  "comments": ["Credits https://github.com/lakafior/audioteka-abs for the original implementation."]
+  "comments": [],
+  "credits": [
+    {
+      "url": "https://github.com/lakafior/audioteka-abs"
+    }
+  ]
 }
