@@ -3,7 +3,7 @@
   "name": "Podium Entertainment",
   "provider": { "name": "Podium Entertainment", "url": "https://podiumentertainment.com/" },
   "available": true,
-  "addToAudiobookshelf": false,
+  "addToAudiobookshelf": true,
   "description": "Fetches book metadata from Podium Entertainment",
   "url": "https://podiumentertainment.com/",
   "parameters": [

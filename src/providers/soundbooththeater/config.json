@@ -6,6 +6,7 @@
     "url": "https://soundbooththeater.com"
   },
   "available": true,
+  "addToAudiobookshelf": true,
   "description": "Audiobook metadata from Soundbooth Theater's public catalog",
   "url": "https://soundbooththeater.com",
   "parameters": [

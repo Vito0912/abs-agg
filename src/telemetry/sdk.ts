@@ -17,14 +17,27 @@ const endpointSchema = z.url({ protocol: /^https?$/ }).refine((value) => {
 }, 'Collector URL must not contain credentials, a query, or a fragment')
 
 interface TelemetryProviders {
-  tracer: TracerProvider
-  meter: MeterProvider
-  logger: LoggerProvider
+  tracer?: TracerProvider
+  meter?: MeterProvider
+  logger?: LoggerProvider
   contextManager: AsyncLocalStorageContextManager
 }
 
 function startTelemetry(): TelemetryProviders | undefined {
   if (process.env.OTEL_ENABLED !== 'true') return undefined
+
+  const signals = z
+    .object({
+      OTEL_TRACES_ENABLED: z.enum(['true', 'false']).default('false'),
+      OTEL_METRICS_ENABLED: z.enum(['true', 'false']).default('true'),
+      OTEL_LOGS_ENABLED: z.enum(['true', 'false']).default('true')
+    })
+    .parse(process.env)
+  const tracesEnabled = signals.OTEL_TRACES_ENABLED === 'true'
+  const metricsEnabled = signals.OTEL_METRICS_ENABLED === 'true'
+  const logsEnabled = signals.OTEL_LOGS_ENABLED === 'true'
+
+  if (!tracesEnabled && !metricsEnabled && !logsEnabled) return undefined
 
   const config = z
     .object({
@@ -37,33 +50,45 @@ function startTelemetry(): TelemetryProviders | undefined {
     resourceFromAttributes({ 'service.name': process.env.OTEL_SERVICE_NAME || 'abs-agg' })
   )
 
-  const tracer = new TracerProvider({
-    resource,
-    spanProcessors: [new BatchSpanProcessor({ exporter: new OTLPTraceExporter({ url: `${endpoint}/v1/traces` }) })]
-  })
-  const meter = new MeterProvider({
-    resource,
-    readers: [
-      new PeriodicExportingMetricReader({
-        exporter: new OTLPMetricExporter({ url: `${endpoint}/v1/metrics` }),
-        exportIntervalMillis: config.OTEL_METRIC_EXPORT_INTERVAL,
-        exportTimeoutMillis: Math.min(config.OTEL_METRIC_EXPORT_INTERVAL, 30000)
-      })
-    ]
-  })
-  const logger = new LoggerProvider({
-    resource,
-    processors: [new BatchLogRecordProcessor({ exporter: new OTLPLogExporter({ url: `${endpoint}/v1/logs` }) })]
-  })
+  const tracer = tracesEnabled ? createTracerProvider() : undefined
+  const meter = metricsEnabled ? createMeterProvider() : undefined
+  const logger = logsEnabled ? createLoggerProvider() : undefined
   const contextManager = new AsyncLocalStorageContextManager().enable()
 
   context.setGlobalContextManager(contextManager)
   propagation.setGlobalPropagator(new W3CTraceContextPropagator())
-  trace.setGlobalTracerProvider(tracer)
-  metrics.setGlobalMeterProvider(meter)
-  logs.setGlobalLoggerProvider(logger)
+  if (tracer) trace.setGlobalTracerProvider(tracer)
+  if (meter) metrics.setGlobalMeterProvider(meter)
+  if (logger) logs.setGlobalLoggerProvider(logger)
 
   return { tracer, meter, logger, contextManager }
+
+  function createTracerProvider(): TracerProvider {
+    return new TracerProvider({
+      resource,
+      spanProcessors: [new BatchSpanProcessor({ exporter: new OTLPTraceExporter({ url: `${endpoint}/v1/traces` }) })]
+    })
+  }
+
+  function createMeterProvider(): MeterProvider {
+    return new MeterProvider({
+      resource,
+      readers: [
+        new PeriodicExportingMetricReader({
+          exporter: new OTLPMetricExporter({ url: `${endpoint}/v1/metrics` }),
+          exportIntervalMillis: config.OTEL_METRIC_EXPORT_INTERVAL,
+          exportTimeoutMillis: Math.min(config.OTEL_METRIC_EXPORT_INTERVAL, 30000)
+        })
+      ]
+    })
+  }
+
+  function createLoggerProvider(): LoggerProvider {
+    return new LoggerProvider({
+      resource,
+      processors: [new BatchLogRecordProcessor({ exporter: new OTLPLogExporter({ url: `${endpoint}/v1/logs` }) })]
+    })
+  }
 }
 
 const providers = startTelemetry()
@@ -72,7 +97,7 @@ export async function shutdownTelemetry(): Promise<void> {
   if (!providers) return
 
   try {
-    await Promise.all([providers.tracer.shutdown(), providers.meter.shutdown(), providers.logger.shutdown()])
+    await Promise.all([providers.tracer?.shutdown(), providers.meter?.shutdown(), providers.logger?.shutdown()])
   } finally {
     providers.contextManager.disable()
   }

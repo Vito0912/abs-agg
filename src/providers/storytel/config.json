@@ -6,7 +6,7 @@
     "url": "https://www.storytel.com/"
   },
   "available": true,
-  "addToAudiobookshelf": false,
+  "addToAudiobookshelf": true,
   "description": "Fetches metadata from Storytel's public search API",
   "url": "https://www.storytel.com/",
   "parameters": [

@@ -6,7 +6,7 @@
     "url": "https://hardcover.app"
   },
   "available": true,
-  "addToAudiobookshelf": false,
+  "addToAudiobookshelf": true,
   "description": "Book metadata from Hardcover.app",
   "url": "https://hardcover.app",
   "requiredEnv": ["HARDCOVER_TOKEN"],

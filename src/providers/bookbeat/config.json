@@ -6,7 +6,7 @@
     "url": "https://www.bookbeat.com/"
   },
   "available": true,
-  "addToAudiobookshelf": false,
+  "addToAudiobookshelf": true,
   "description": "Fetches metadata from BookBeat's public search API",
   "url": "https://www.bookbeat.com/",
   "parameters": [

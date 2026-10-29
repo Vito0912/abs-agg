@@ -6,7 +6,7 @@
     "url": "https://meta.audiosilo.app/"
   },
   "available": true,
-  "addToAudiobookshelf": false,
+  "addToAudiobookshelf": true,
   "description": "Community audiobook metadata with works, narrators, series, identifiers, and chapter timings",
   "url": "https://meta.audiosilo.app/",
   "parameters": [

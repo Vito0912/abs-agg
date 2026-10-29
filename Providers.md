@@ -66,6 +66,18 @@ Total Providers: 22
 GET /ardaudiothek/search?title=example&author=author
 ```
 
+### Add to Audiobookshelf
+
+```
+https://provider.vito0912.de/ardaudiothek
+```
+
+Under "Auth" use `abs`
+
+For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
+
+> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
+
 ### Comments
 
 - Metadata is in German.
@@ -154,6 +166,18 @@ GET /audible/search?title=example&author=author
 GET /audiosilo/search?title=example&author=author
 ```
 
+### Add to Audiobookshelf
+
+```
+https://provider.vito0912.de/audiosilo
+```
+
+Under "Auth" use `abs`
+
+For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
+
+> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
+
 ---
 
 ## Audioteka
@@ -200,6 +224,18 @@ GET /audiosilo/search?title=example&author=author
 GET /audioteka/lang:pl/search?title=example&author=author
 ```
 
+### Add to Audiobookshelf
+
+```
+https://provider.vito0912.de/audioteka/lang:pl
+```
+
+Under "Auth" use `abs`
+
+For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
+
+> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
+
 ---
 
 ## Big Finish
@@ -237,6 +273,18 @@ GET /audioteka/lang:pl/search?title=example&author=author
 ```
 GET /bigfinish/search?title=example&author=author
 ```
+
+### Add to Audiobookshelf
+
+```
+https://provider.vito0912.de/bigfinish
+```
+
+Under "Auth" use `abs`
+
+For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
+
+> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
 
 ---
 
@@ -280,6 +328,18 @@ GET /bigfinish/search?title=example&author=author
 ```
 GET /bookbeat/market:austria/search?title=example&author=author
 ```
+
+### Add to Audiobookshelf
+
+```
+https://provider.vito0912.de/bookbeat/market:austria
+```
+
+Under "Auth" use `abs`
+
+For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
+
+> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
 
 ---
 
@@ -399,6 +459,18 @@ GET /dreifragezeichen/search?title=example&author=author
 GET /elevenreader/search?title=example&author=author
 ```
 
+### Add to Audiobookshelf
+
+```
+https://provider.vito0912.de/elevenreader
+```
+
+Under "Auth" use `abs`
+
+For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
+
+> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
+
 ---
 
 ## Goodreads
@@ -438,6 +510,18 @@ GET /elevenreader/search?title=example&author=author
 ```
 GET /goodreads/search?title=example&author=author
 ```
+
+### Add to Audiobookshelf
+
+```
+https://provider.vito0912.de/goodreads
+```
+
+Under "Auth" use `abs`
+
+For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
+
+> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
 
 ### Comments
 
@@ -483,6 +567,18 @@ GET /goodreads/search?title=example&author=author
 GET /graphicaudio/search?title=example&author=author
 ```
 
+### Add to Audiobookshelf
+
+```
+https://provider.vito0912.de/graphicaudio
+```
+
+Under "Auth" use `abs`
+
+For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
+
+> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
+
 ---
 
 ## Hardcover
@@ -523,6 +619,18 @@ GET /graphicaudio/search?title=example&author=author
 ```
 GET /hardcover/search?title=example&author=author
 ```
+
+### Add to Audiobookshelf
+
+```
+https://provider.vito0912.de/hardcover
+```
+
+Under "Auth" use `abs`
+
+For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
+
+> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
 
 ---
 
@@ -786,6 +894,18 @@ GET /overdrive/library:example/search?title=example&author=author
 GET /podium/search?title=example&author=author
 ```
 
+### Add to Audiobookshelf
+
+```
+https://provider.vito0912.de/podium
+```
+
+Under "Auth" use `abs`
+
+For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
+
+> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
+
 ---
 
 ## Skoobe
@@ -863,6 +983,18 @@ GET /skoobe/search?title=example&author=author
 GET /soundbooththeater/search?title=example&author=author
 ```
 
+### Add to Audiobookshelf
+
+```
+https://provider.vito0912.de/soundbooththeater
+```
+
+Under "Auth" use `abs`
+
+For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
+
+> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
+
 ---
 
 ## Storytel
@@ -910,6 +1042,18 @@ GET /soundbooththeater/search?title=example&author=author
 GET /storytel/language:en/search?title=example&author=author
 ```
 
+### Add to Audiobookshelf
+
+```
+https://provider.vito0912.de/storytel/language:en
+```
+
+Under "Auth" use `abs`
+
+For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
+
+> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
+
 ---
 
 ## The StoryGraph
@@ -947,3 +1091,4 @@ GET /storygraph/search?title=example&author=author
 ```
 
 ---
+

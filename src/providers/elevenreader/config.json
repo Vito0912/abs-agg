@@ -6,7 +6,7 @@
     "url": "https://elevenreader.io/"
   },
   "available": true,
-  "addToAudiobookshelf": false,
+  "addToAudiobookshelf": true,
   "description": "Fetches audiobook metadata from ElevenReader's public search and details APIs",
   "url": "https://elevenreader.io/",
   "parameters": [

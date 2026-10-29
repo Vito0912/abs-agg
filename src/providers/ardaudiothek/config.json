@@ -6,7 +6,7 @@
     "url": "https://www.ardaudiothek.de/"
   },
   "available": true,
-  "addToAudiobookshelf": false,
+  "addToAudiobookshelf": true,
   "description": "Fetches audiobook metadata from the ARD Audiothek (public broadcasters in Germany)",
   "url": "https://www.ardaudiothek.de/",
   "parameters": [

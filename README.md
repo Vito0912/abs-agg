@@ -49,6 +49,13 @@ This unifies many existing audiobook metadata providers into a single server:
 
 ## Quick Start
 
+### Hosted service
+
+You can use the hosted service at [provider.vito0912.de](https://provider.vito0912.de/).
+In Audiobookshelf, use `https://provider.vito0912.de/<provider>` with any required path parameters and set **Auth** to `abs`.
+
+The hosted service may be unavailable at any time. See the [privacy policy](PRIVACYPOLICY.md) before using it.
+
 ### Using Docker (recommended)
 
 ```bash
@@ -119,7 +126,10 @@ Environment variables:
 | `CACHE_SEARCH_TTL_SECONDS`         | No                        | Search freshness in seconds before jitter (default: 3600)                    |
 | `CACHE_DETAIL_TTL_SECONDS`         | No                        | Detail freshness in seconds before jitter (default: 86400)                   |
 | `CACHE_NEGATIVE_TTL_SECONDS`       | No                        | Empty or incomplete result freshness in seconds (default: 120)               |
-| `OTEL_ENABLED`                     | No                        | Enable OpenTelemetry traces, metrics, and logs (default: false)              |
+| `OTEL_ENABLED`                     | No                        | Enable OpenTelemetry export (default: false)                                 |
+| `OTEL_LOGS_ENABLED`                | No                        | Export logs when OTEL is enabled (default: true)                             |
+| `OTEL_METRICS_ENABLED`             | No                        | Export metrics when OTEL is enabled (default: true)                          |
+| `OTEL_TRACES_ENABLED`              | No                        | Export traces when OTEL is enabled (default: false)                          |
 | `OTEL_SERVICE_NAME`                | No                        | Telemetry service name (default: abs-agg)                                    |
 | `OTEL_EXPORTER_OTLP_ENDPOINT`      | When telemetry is enabled | External collector base URL, e.g. http://alloy:4318                          |
 | `OTEL_METRIC_EXPORT_INTERVAL`      | No                        | Metric export interval in milliseconds (default: 60000)                      |

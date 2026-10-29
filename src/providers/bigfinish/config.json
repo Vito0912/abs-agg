@@ -6,6 +6,7 @@
     "url": "https://www.bigfinish.com/"
   },
   "available": true,
+  "addToAudiobookshelf": true,
   "description": "Fetches audiobook metadata from Big Finish Productions (Doctor Who, Torchwood, and other audio dramas)",
   "url": "https://www.bigfinish.com/",
   "parameters": [
