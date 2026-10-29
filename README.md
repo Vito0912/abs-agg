@@ -9,18 +9,28 @@ abs-agg named after "aggregate" and the German "AGG", because each provider shou
 ## Supported metadata providers
 
 - ARD Audiothek
+- Audible
+- AudioSilo Meta
 - Audioteka
 - Big Finish
 - BookBeat
+- Deezer
+- Die drei ???
+- ElevenReader
 - Goodreads
 - Graphic Audio
 - Hardcover
+- Libro.fm
 - LibriVox
-- Libro
+- Nextory
+- OverDrive
+- Podium Entertainment
+- Skoobe
+- Soundbooth Theater
 - Storytel
 - The StoryGraph
-- Die drei ???
-- Soundbooth
+
+- Local catalog
 
 For detailed documentation on each provider, see [Providers.md](Providers.md).
 
