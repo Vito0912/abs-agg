@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio'
 import type { AudiotekaFullMetadata, AudiotekaLanguageConfig, AudiotekaSearchMatch } from './types'
+import { resolveProviderUrl } from '../../utils/outboundPolicy'
 
 const BASE_URL = 'https://audioteka.com'
 
@@ -160,7 +161,7 @@ export function parseSearchResults($: cheerio.CheerioAPI): AudiotekaSearchMatch[
 
     const title = $book.find('[class*="teaser_title__"]').text().trim()
     const bookPath = $book.find('[class*="teaser_link__"]').attr('href')
-    const bookUrl = bookPath ? BASE_URL + bookPath : ''
+    const bookUrl = bookPath ? resolveProviderUrl(bookPath, BASE_URL) : ''
     const author = $book.find('[class*="teaser_author__"]').text().trim()
     const cover = cleanCoverUrl($book.find('[class*="teaser_coverImage__"]').attr('src'))
     const rating = parseFloat($book.find('[class*="teaser-footer_rating__"]').text().trim()) || undefined

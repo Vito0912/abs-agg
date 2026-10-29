@@ -10,7 +10,7 @@ import { graphicAudioBookSchema } from './schemas'
 import type { GraphicAudioBook } from './types'
 
 const CATALOG_URLS = [
-  'https://github.com/binyaminyblatt/graphicaudio_scraper/raw/refs/heads/main/results.json',
+  'https://raw.githubusercontent.com/binyaminyblatt/graphicaudio_scraper/refs/heads/main/results.json',
   'https://raw.githubusercontent.com/binyaminyblatt/graphicaudio_scraper/refs/heads/main/wayback_results.json'
 ]
 

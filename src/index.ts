@@ -7,11 +7,13 @@ import type { Server } from 'node:http'
 import { providerRegistry } from './providers/ProviderRegistry'
 import { router } from './routes'
 import { createAuthMiddleware } from './middleware/auth'
+import { handleRequestError } from './middleware/errors'
 import { metadataCache } from './cache/service'
 import { dbManager } from './database/manager'
 import { closeCatalogCache } from './cache/catalog'
 
 const app = express()
+app.disable('x-powered-by')
 const port = Number(process.env.PORT || 3000)
 let server: Server | undefined
 let shuttingDown = false
@@ -26,6 +28,8 @@ app.get('/providers', (_req, res) => {
 
   res.json({ providers })
 })
+
+app.use(handleRequestError)
 
 async function startServer(): Promise<void> {
   await dbManager.generation()

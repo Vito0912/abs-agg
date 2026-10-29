@@ -15,6 +15,8 @@ const querySchema = z.object({
   enrich: z.enum(['true', 'false']).optional()
 })
 
+let activeSearches = 0
+
 class InvalidSearchRequest extends Error {
   constructor(readonly details: z.ZodError) {
     super('Invalid request parameters')
@@ -49,6 +51,13 @@ async function search(req: Request): Promise<MetadataBundle> {
 }
 
 export async function searchHandler(req: Request, res: Response): Promise<void> {
+  if (activeSearches >= 32) {
+    res.setHeader('Retry-After', '1')
+    res.status(503).json({ error: 'Metadata search capacity reached' })
+    return
+  }
+
+  activeSearches++
   try {
     const bundle = await search(req)
     const matches = absMatches(bundle)
@@ -56,6 +65,8 @@ export async function searchHandler(req: Request, res: Response): Promise<void> 
     res.json({ matches })
   } catch (error) {
     sendSearchError(error, req, res)
+  } finally {
+    activeSearches--
   }
 }
 

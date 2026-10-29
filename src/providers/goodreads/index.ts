@@ -69,7 +69,7 @@ export default class GoodreadsProvider extends BaseProvider {
   async searchBooks(title: string, author: string | null, params: ParsedParameters): Promise<BookMetadata[]> {
     const limit = params.limit ? Number(params.limit) : 10
 
-    const searchUrl = `${GOODREADS_API_URL}/search/index.xml?key=${this.apiKey}&q=${encodeURIComponent(title)}&search[field]=title`
+    const searchUrl = `${GOODREADS_API_URL}/search/index.xml?key=${encodeURIComponent(this.apiKey)}&q=${encodeURIComponent(title)}&search[field]=title`
 
     const response = await httpClient.get(searchUrl, {
       headers: { Accept: 'application/xml' },
@@ -103,7 +103,7 @@ export default class GoodreadsProvider extends BaseProvider {
   }
 
   async fetchBook(bookId: string, _params: ParsedParameters): Promise<BookMetadata | null> {
-    const bookUrl = `${GOODREADS_API_URL}/book/show.xml?key=${this.apiKey}&id=${encodeURIComponent(bookId)}`
+    const bookUrl = `${GOODREADS_API_URL}/book/show.xml?key=${encodeURIComponent(this.apiKey)}&id=${encodeURIComponent(bookId)}`
 
     const response = await httpClient.get(bookUrl, {
       headers: { Accept: 'application/xml' },

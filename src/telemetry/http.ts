@@ -48,9 +48,12 @@ export const observeHttpRequest: RequestHandler = (req, res, next) => {
 
     runWithRequestLogContext(logContext, () =>
       context.with(requestContext, () => {
-        const route = typeof req.route?.path === 'string' ? req.route.path : 'unmatched'
-        const provider = req.provider?.getConfig().id || 'none'
         const status = res.statusCode
+        let route = 'unmatched'
+        if (typeof req.route?.path === 'string') route = req.route.path
+        else if (status === 401) route = 'unauthorized'
+
+        const provider = req.provider?.getConfig().id || 'none'
         const durationSeconds = (performance.now() - startedAt) / 1000
         const attributes = {
           'http.request.method': method,

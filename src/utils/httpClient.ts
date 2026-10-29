@@ -4,6 +4,12 @@ import { observeOperation } from '../telemetry/operations'
 import type { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { remainingRequestMs } from './requestContext'
 import { setTimeout as delay } from 'node:timers/promises'
+import { Agent } from 'node:https'
+import { OutboundPolicyError, validateUpstreamUrl } from './outboundPolicy'
+
+type UpstreamRequestOptions = Pick<AxiosRequestConfig, 'headers' | 'params' | 'responseType'> & {
+  maxRedirects?: 0
+}
 
 export class UpstreamError extends Error {
   constructor(
@@ -31,12 +37,17 @@ class HostQueue {
       return () => this.release()
     }
 
+    if (this.waiting.length >= 32) throw new UpstreamError('Upstream request queue is full')
+
     await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        const index = this.waiting.findIndex((request) => request.timeout === timeout)
-        if (index >= 0) this.waiting.splice(index, 1)
-        reject(new UpstreamError('Upstream request queue timed out'))
-      }, 10000)
+      const timeout = setTimeout(
+        () => {
+          const index = this.waiting.findIndex((request) => request.timeout === timeout)
+          if (index >= 0) this.waiting.splice(index, 1)
+          reject(new UpstreamError('Upstream request queue timed out'))
+        },
+        Math.min(10000, remainingRequestMs())
+      )
 
       this.waiting.push({ resolve, timeout })
     })
@@ -57,6 +68,9 @@ class HostQueue {
 }
 
 const client = axios.create({
+  adapter: 'http',
+  proxy: false,
+  httpsAgent: new Agent({ maxSockets: 4, maxTotalSockets: 32, maxFreeSockets: 4 }),
   timeout: 15000,
   maxContentLength: 32 * 1024 * 1024,
   maxBodyLength: 1024 * 1024,
@@ -83,6 +97,7 @@ function hostQueue(url: string): HostQueue {
 
 function canRetry(error: unknown): boolean {
   if (!axios.isAxiosError(error)) return false
+  if (error.code === 'ERR_UPSTREAM_DESTINATION' || error.code === 'ERR_FR_REDIRECTION_FAILURE') return false
   const status = error.response?.status
 
   return status === 429 || status === 502 || status === 503 || status === 504 || !error.response
@@ -90,6 +105,14 @@ function canRetry(error: unknown): boolean {
 
 async function request<T>(config: AxiosRequestConfig): Promise<AxiosResponse<T>> {
   if (!config.url) throw new Error('Upstream URL is required')
+  const url = validateUpstreamUrl(config.url)
+  config.url = url.href
+  config.beforeRedirect = (options) => {
+    const destination = validateUpstreamUrl(
+      `${options.protocol}//${options.hostname}${options.port ? `:${options.port}` : ''}${options.path || '/'}`
+    )
+    if (destination.origin !== url.origin || options.auth) throw new OutboundPolicyError()
+  }
   const release = await hostQueue(config.url).acquire()
 
   try {
@@ -97,7 +120,7 @@ async function request<T>(config: AxiosRequestConfig): Promise<AxiosResponse<T>>
   } catch (error) {
     if (axios.isAxiosError(error)) {
       throw new UpstreamError('Upstream HTTP request failed', error.response?.status, {
-        cause: new Error(error.message)
+        cause: new Error(error.code || 'Upstream transport error')
       })
     }
     throw error
@@ -151,7 +174,7 @@ async function sendWithinDeadline<T>(config: AxiosRequestConfig): Promise<AxiosR
     'upstream.request',
     attributes,
     async () => {
-      const response = await client.request<T>({ ...config, timeout })
+      const response = await client.request<T>({ ...config, timeout, signal: AbortSignal.timeout(timeout) })
       trace.getActiveSpan()?.setAttribute('http.response.status_code', response.status)
 
       return response
@@ -161,10 +184,10 @@ async function sendWithinDeadline<T>(config: AxiosRequestConfig): Promise<AxiosR
 }
 
 export const httpClient = {
-  get<T = unknown>(url: string, config: AxiosRequestConfig = {}): Promise<AxiosResponse<T>> {
+  get<T = unknown>(url: string, config: UpstreamRequestOptions = {}): Promise<AxiosResponse<T>> {
     return request<T>({ ...config, url, method: 'GET' })
   },
-  post<T = unknown>(url: string, data: unknown, config: AxiosRequestConfig = {}): Promise<AxiosResponse<T>> {
+  post<T = unknown>(url: string, data: unknown, config: UpstreamRequestOptions = {}): Promise<AxiosResponse<T>> {
     return request<T>({ ...config, url, data, method: 'POST' })
   }
 }
