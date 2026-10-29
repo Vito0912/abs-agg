@@ -1,3 +1,4 @@
+import { errorAttributes, logger } from '../../telemetry/logger'
 import * as cheerio from 'cheerio'
 import type { BookMetadata, ParsedParameters, ProviderConfig } from '../../types'
 import { normalizeBookMetadata } from '../../utils/helpers'
@@ -52,7 +53,7 @@ export default class AudiotekaProvider extends BaseProvider {
           books.push(metadata)
         }
       } catch (error) {
-        console.error(`Error fetching details for ${match.title}:`, error)
+        logger.error('Provider details failed', { provider: this.config.id, ...errorAttributes(error) })
         const basicMetadata = this.mapToBookMetadata({
           ...match,
           language: langConfig.languageName

@@ -1,3 +1,4 @@
+import { errorAttributes, logger } from '../../telemetry/logger'
 import type { EntityKind, MetadataBundle, MetadataEntity, MetadataQuery, ParsedParameters } from '../../types'
 import { metadataBundleSchema } from '../../types/metadata'
 import { emptyBundle } from '../../database/manager'
@@ -68,7 +69,7 @@ export default class AudioSiloProvider extends BaseProvider {
       if (!(error instanceof UpstreamError)) throw error
       if (error.status !== undefined && error.status !== 404 && error.status !== 429 && error.status < 500) throw error
 
-      console.warn(`AudioSilo chapters unavailable for ${workId}/${recording.id}`)
+      logger.warn('Provider chapters unavailable', { provider: this.config.id, ...errorAttributes(error) })
       return { recording, chapters: [], complete: false }
     }
   }

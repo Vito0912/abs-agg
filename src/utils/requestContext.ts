@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 import type { Request, Response, NextFunction } from 'express'
 import type { CacheMode } from '../types'
+import { setRequestLogAttributes } from '../telemetry/context'
 
 interface RequestContext {
   cacheMode: CacheMode
@@ -37,6 +38,13 @@ export function remainingRequestMs(): number {
 }
 
 export function attachRequestContext(req: Request, _res: Response, next: NextFunction): void {
+  const query = req.query.title || req.query.query
+  setRequestLogAttributes({
+    'search.query': typeof query === 'string' ? query.slice(0, 500) : undefined,
+    'search.author': typeof req.query.author === 'string' ? req.query.author.slice(0, 300) : undefined,
+    'search.returned_books': 0
+  })
+
   let mode: CacheMode = 'default'
   if (req.query.cache === 'refresh') mode = 'refresh'
   if (req.query.cache === 'false' || process.env.SKIP_CACHE === 'true' || process.env.DISABLE_CACHE === 'true') {

@@ -1,3 +1,4 @@
+import { errorAttributes, logger } from './telemetry/logger'
 import { providerConfigSchema } from './types/config'
 import fs from 'fs'
 import path from 'path'
@@ -22,7 +23,7 @@ function generateProviderMarkdown(): void {
         const config = providerConfigSchema.parse(JSON.parse(configContent))
         if (config.available !== false) configs.push(config)
       } catch (error) {
-        console.error(`Failed to read config for ${dir}:`, error)
+        logger.error('Failed to read provider config', { provider: dir, ...errorAttributes(error) })
       }
     }
   }
@@ -44,7 +45,7 @@ function generateProviderMarkdown(): void {
   }
 
   fs.writeFileSync(outputPath, markdown, 'utf-8')
-  console.log(`Generated Providers.md with ${configs.length} provider(s)`)
+  logger.info('Generated provider documentation', { count: configs.length })
 }
 
 function generateProviderSection(config: ProviderConfig): string {

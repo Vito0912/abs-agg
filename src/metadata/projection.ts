@@ -1,6 +1,7 @@
 import type { BookMetadata, Contributor, MetadataBundle, MetadataEntity, SeriesMetadata } from '../types'
 import { absBookSchema } from '../types/abs'
 import type { AbsBook } from '../types/abs'
+import { selectMetadataBundle } from './bundle'
 
 type BookEntity = Extract<MetadataEntity, { kind: 'work' | 'book' }>
 
@@ -125,8 +126,18 @@ export function bundleBooks(bundle: MetadataBundle): BookMetadata[] {
 }
 
 export function absMatches(bundle: MetadataBundle): AbsBook[] {
-  return bundleBooks(bundle).map((book) => {
+  const entities = new Map(bundle.entities.map((entity) => [entity.id, entity]))
+  const matches: AbsBook[] = []
+
+  for (const id of bundle.matches) {
+    const entity = entities.get(id)
+    if (!entity || !('contributors' in entity)) continue
+
+    const book = projectBook(entity, entities)
     const duration = book.duration === undefined ? undefined : Math.round(book.duration)
-    return absBookSchema.parse({ ...book, duration })
-  })
+    const metadata = selectMetadataBundle(bundle, [id])
+    matches.push(absBookSchema.parse({ ...book, duration, metadata }))
+  }
+
+  return matches
 }

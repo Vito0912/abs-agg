@@ -1,3 +1,4 @@
+import { errorAttributes, logger } from '../../telemetry/logger'
 import { z } from 'zod'
 import type { BookMetadata, ParsedParameters } from '../../types'
 import { mapConcurrent } from '../../utils/concurrency'
@@ -38,7 +39,7 @@ export default class SkoobeProvider extends BaseProvider {
         return { book }
       } catch (error) {
         markPartialResult()
-        console.error(`Skoobe details failed for ${bookPath}:`, error)
+        logger.error('Provider details failed', { provider: this.config.id, ...errorAttributes(error) })
         return { book: null, error }
       }
     })

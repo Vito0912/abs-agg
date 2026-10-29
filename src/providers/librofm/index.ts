@@ -1,3 +1,4 @@
+import { errorAttributes, logger } from '../../telemetry/logger'
 import { mapConcurrent } from '../../utils/concurrency'
 import { markPartialResult } from '../../utils/requestContext'
 import type { BookMetadata, ParsedParameters, ProviderConfig, SeriesMetadata } from '../../types'
@@ -45,7 +46,6 @@ export default class LibroFMProvider extends BaseProvider {
     }
 
     const searchUrl = `${this.searchApiUrl}?${searchParams.toString()}`
-    console.log(`Fetching Libro.fm search results from: ${searchUrl}`)
 
     const searchRes = await httpClient.get<SearchApiResponse>(searchUrl, { headers: this.getHeaders() })
     if (searchRes.status === 404) {
@@ -69,7 +69,7 @@ export default class LibroFMProvider extends BaseProvider {
         return await this.getBookById(String(book.isbn), params)
       } catch (error) {
         markPartialResult()
-        console.error(`Failed to fetch details for ISBN ${book.isbn}:`, error)
+        logger.error('Provider details failed', { provider: this.config.id, ...errorAttributes(error) })
         return null
       }
     })
@@ -79,7 +79,6 @@ export default class LibroFMProvider extends BaseProvider {
 
   async fetchBook(bookId: string, _params: ParsedParameters): Promise<BookMetadata | null> {
     const detailsUrl = `${this.detailsApiUrl}/${bookId}`
-    console.log(`Fetching Libro.fm details from: ${detailsUrl}`)
 
     const detailsRes = await httpClient.get<DetailsApiResponse>(detailsUrl, { headers: this.getHeaders() })
     if (detailsRes.status === 404) {

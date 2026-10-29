@@ -1,5 +1,7 @@
-import 'dotenv/config'
+import { shutdownTelemetry } from './telemetry/sdk'
 import express from 'express'
+import { observeHttpRequest } from './telemetry/http'
+import { errorAttributes, logger } from './telemetry/logger'
 import path from 'node:path'
 import type { Server } from 'node:http'
 import { providerRegistry } from './providers/ProviderRegistry'
@@ -14,6 +16,7 @@ const port = Number(process.env.PORT || 3000)
 let server: Server | undefined
 let shuttingDown = false
 
+app.use(observeHttpRequest)
 app.use(createAuthMiddleware())
 app.use(express.json({ limit: '32kb' }))
 app.use('/', router)
@@ -36,9 +39,9 @@ async function startServer(): Promise<void> {
     })
   })
 
-  console.log(`Metadata Provider Server running on port ${port}`)
+  logger.info('Metadata Provider Server started', { port })
   const providerIds = providerRegistry.getAllConfigs().map((provider) => provider.id)
-  console.log(`Loaded ${providerIds.length} providers: ${providerIds.join(', ') || 'none'}`)
+  logger.info('Providers loaded', { count: providerIds.length, providers: providerIds })
 }
 
 async function shutdown(): Promise<void> {
@@ -46,7 +49,7 @@ async function shutdown(): Promise<void> {
   shuttingDown = true
 
   const deadline = setTimeout(() => {
-    console.error('Metadata shutdown timed out')
+    logger.error('Metadata shutdown timed out')
     process.exit(1)
   }, 45000)
   deadline.unref()
@@ -59,17 +62,33 @@ async function shutdown(): Promise<void> {
       })
     }
   } catch (error) {
-    console.error('Metadata shutdown failed:', error)
+    logger.error('Metadata shutdown failed', { ...errorAttributes(error) })
     process.exitCode = 1
-  } finally {
-    await closeCatalogCache()
-    await metadataCache.close()
-    clearTimeout(deadline)
+  }
+
+  await closeResources()
+  clearTimeout(deadline)
+}
+
+async function closeResources(): Promise<void> {
+  const resources = [
+    { name: 'Catalog cache', close: closeCatalogCache },
+    { name: 'Metadata cache', close: () => metadataCache.close() },
+    { name: 'Telemetry', close: shutdownTelemetry }
+  ]
+
+  for (const resource of resources) {
+    try {
+      await resource.close()
+    } catch (error) {
+      logger.error('Resource shutdown failed', { resource: resource.name, ...errorAttributes(error) })
+      process.exitCode = 1
+    }
   }
 }
 
 void startServer().catch(async (error: unknown) => {
-  console.error('Failed to start server:', error)
+  logger.error('Failed to start server', { ...errorAttributes(error) })
   process.exitCode = 1
   await shutdown()
 })

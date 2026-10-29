@@ -1,3 +1,4 @@
+import { errorAttributes, logger } from '../../telemetry/logger'
 import { mapConcurrent } from '../../utils/concurrency'
 import type { BookMetadata, ParsedParameters, ProviderConfig } from '../../types'
 import { normalizeBookMetadata } from '../../utils/helpers'
@@ -42,7 +43,7 @@ export default class ElevenReaderProvider extends BaseProvider {
       const book = await this.getBookById(read.read_id, params)
       if (book) return book
     } catch (error) {
-      console.error(`Failed to fetch ElevenReader details for ${read.read_id}:`, error)
+      logger.error('Provider details failed', { provider: this.config.id, ...errorAttributes(error) })
     }
 
     return { ...this.mapMetadata(read.read_id, null, read), quality: 'summary' }

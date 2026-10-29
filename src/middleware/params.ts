@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express'
 import { providerRegistry } from '../providers/ProviderRegistry'
 import { ParameterValidator } from '../utils/validator'
 import type { ParsedParameters } from '../types'
+import { setRequestLogAttributes } from '../telemetry/context'
 
 export function parseProviderParams(req: Request, res: Response, next: NextFunction): void {
   const { providerId, params } = req.params
@@ -78,6 +79,10 @@ export function parseProviderParams(req: Request, res: Response, next: NextFunct
 
   req.parsedParams = parsedParams
   req.provider = provider
+  setRequestLogAttributes({ provider: config.id })
+  for (const [name, value] of Object.entries(parsedParams)) {
+    setRequestLogAttributes({ [`search.parameters.${name}`]: value })
+  }
   next()
 }
 

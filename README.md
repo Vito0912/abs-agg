@@ -95,20 +95,25 @@ curl "http://localhost:3000/librivox/search?title=sherlock+holmes&author=doyle"
 
 Environment variables:
 
-| Variable              | Required | Description                                                             |
-| --------------------- | -------- | ----------------------------------------------------------------------- |
-| `PORT`                | No       | Server port (default: 3000)                                             |
-| `AUTH_TOKEN`          | No       | Enables and uses value as authentication                                |
-| `PROVIDER_WHITELIST`  | No       | Comma-separated provider IDs to load (default: all available providers) |
-| `HARDCOVER_TOKEN`     | No       | API token for Hardcover provider                                        |
-| `GOODREADS_KEY`       | No       | API key for Goodreads provider                                          |
-| `DEEZER_ACCESS_TOKEN` | No       | Token for higher rate limits                                            |
-| `ENABLE_LOCAL_PROVIDER` | No | Enable the local catalog provider (default: false) |
-| `ENABLE_CROSS_PROVIDER_ENRICHMENT` | No | Fill missing descriptions from compatible stored metadata (default: false) |
-| `METADATA_DATABASE_PATH` | No | SQLite database path (default: ./data/metadata.sqlite) |
-| `CACHE_SEARCH_TTL_SECONDS` | No | Search freshness in seconds before jitter (default: 3600) |
-| `CACHE_DETAIL_TTL_SECONDS` | No | Detail freshness in seconds before jitter (default: 86400) |
-| `CACHE_NEGATIVE_TTL_SECONDS` | No | Empty or incomplete result freshness in seconds (default: 120) |
+| Variable                           | Required                  | Description                                                                  |
+| ---------------------------------- | ------------------------- | ---------------------------------------------------------------------------- |
+| `PORT`                             | No                        | Server port (default: 3000)                                                  |
+| `AUTH_TOKEN`                       | No                        | Enables and uses value as authentication                                     |
+| `PROVIDER_WHITELIST`               | No                        | Comma-separated provider IDs to load (default: all available providers)      |
+| `HARDCOVER_TOKEN`                  | No                        | API token for Hardcover provider                                             |
+| `GOODREADS_KEY`                    | No                        | API key for Goodreads provider                                               |
+| `DEEZER_ACCESS_TOKEN`              | No                        | Token for higher rate limits                                                 |
+| `ENABLE_LOCAL_PROVIDER`            | No                        | Enable the local catalog provider (default: false)                           |
+| `ENABLE_CROSS_PROVIDER_ENRICHMENT` | No                        | Fill missing descriptions from compatible stored metadata (default: false)   |
+| `METADATA_DATABASE_PATH`           | No                        | SQLite database path (default: ./data/metadata.sqlite)                       |
+| `CACHE_SEARCH_TTL_SECONDS`         | No                        | Search freshness in seconds before jitter (default: 3600)                    |
+| `CACHE_DETAIL_TTL_SECONDS`         | No                        | Detail freshness in seconds before jitter (default: 86400)                   |
+| `CACHE_NEGATIVE_TTL_SECONDS`       | No                        | Empty or incomplete result freshness in seconds (default: 120)               |
+| `OTEL_ENABLED`                     | No                        | Enable OpenTelemetry traces, metrics, and logs (default: false)              |
+| `OTEL_SERVICE_NAME`                | No                        | Telemetry service name (default: abs-agg)                                    |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`      | When telemetry is enabled | External collector base URL, e.g. http://alloy:4318                          |
+| `OTEL_METRIC_EXPORT_INTERVAL`      | No                        | Metric export interval in milliseconds (default: 60000)                      |
+| `LOG_REQUESTS`                     | No                        | Enable JSON request logs with trace/span IDs when available (default: false) |
 
 ## Contributing
 

@@ -1,4 +1,6 @@
 import axios from 'axios'
+import { SpanKind, trace } from '@opentelemetry/api'
+import { observeOperation } from '../telemetry/operations'
 import type { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { remainingRequestMs } from './requestContext'
 import { setTimeout as delay } from 'node:timers/promises'
@@ -140,7 +142,22 @@ async function sendWithinDeadline<T>(config: AxiosRequestConfig): Promise<AxiosR
 
   const timeout = Math.min(15000, remainingMs)
 
-  return client.request<T>({ ...config, timeout })
+  const attributes = {
+    'http.request.method': config.method || 'GET',
+    'server.address': new URL(config.url || '').hostname
+  }
+
+  return observeOperation(
+    'upstream.request',
+    attributes,
+    async () => {
+      const response = await client.request<T>({ ...config, timeout })
+      trace.getActiveSpan()?.setAttribute('http.response.status_code', response.status)
+
+      return response
+    },
+    SpanKind.CLIENT
+  )
 }
 
 export const httpClient = {

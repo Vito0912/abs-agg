@@ -1,3 +1,4 @@
+import { errorAttributes, logger } from '../../telemetry/logger'
 import { z } from 'zod'
 import type { BookMetadata, ParsedParameters, ProviderConfig } from '../../types'
 import { normalizeBookMetadata } from '../../utils/helpers'
@@ -132,7 +133,11 @@ export default class BigFinishProvider extends BaseProvider {
               .object({ releaseData: bigFinishReleaseDataSchema.optional() })
               .parse(JSON.parse(rsc.slice(start, index + 1)))
             return payload.releaseData || null
-          } catch {
+          } catch (error) {
+            logger.warn('Provider structured metadata invalid', {
+              provider: this.config.id,
+              ...errorAttributes(error)
+            })
             return null
           }
         }

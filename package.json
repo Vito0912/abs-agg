@@ -32,6 +32,16 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.10.0",
+    "@opentelemetry/context-async-hooks": "^3.0.0",
+    "@opentelemetry/core": "^3.0.0",
+    "@opentelemetry/exporter-logs-otlp-proto": "^0.300.0",
+    "@opentelemetry/exporter-metrics-otlp-proto": "^0.300.0",
+    "@opentelemetry/exporter-trace-otlp-proto": "^0.300.0",
+    "@opentelemetry/resources": "^3.0.0",
+    "@opentelemetry/sdk-logs": "^3.0.0",
+    "@opentelemetry/sdk-metrics": "^3.0.0",
+    "@opentelemetry/sdk-trace": "^3.0.0",
     "axios": "^1.20.0",
     "better-sqlite3": "^12.11.1",
     "cheerio": "^1.2.0",

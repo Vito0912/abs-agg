@@ -1,4 +1,6 @@
 import { dbManager } from '../database/manager'
+import { recordCacheEvent } from '../telemetry/operations'
+import { errorAttributes, logger } from '../telemetry/logger'
 import type { DatabaseManager } from '../database/manager'
 import type { CacheMode, MetadataBundle } from '../types'
 import { metadataBundleSchema } from '../types/metadata'
@@ -23,7 +25,9 @@ export class MetadataCache {
 
   constructor(private readonly database: DatabaseManager = dbManager) {
     this.cleanup = setInterval(() => {
-      void this.database.prune().catch((error: unknown) => console.error('Cache cleanup failed:', error))
+      void this.database
+        .prune()
+        .catch((error: unknown) => logger.error('Cache cleanup failed', { ...errorAttributes(error) }))
     }, 60000)
     this.cleanup.unref()
   }
@@ -31,28 +35,35 @@ export class MetadataCache {
   async getOrLoad(request: CacheRequest): Promise<MetadataBundle> {
     if (this.closed) throw new Error('Metadata cache is closing')
     const mode = request.mode || cacheMode()
-    if (mode === 'disabled') return this.fetchAndStore(request, false)
+    if (mode === 'disabled') {
+      recordCacheEvent(request.provider, 'disabled')
+      return this.fetchAndStore(request, false)
+    }
 
-    const cached = await this.read(request.key)
+    const cached = await this.read(request.key, request.provider)
     const now = Date.now()
     if (mode !== 'refresh' && cached && now < cached.freshUntil) {
       this.metrics.fresh++
+      recordCacheEvent(request.provider, 'fresh')
       return cached.bundle
     }
 
     if (mode !== 'refresh' && cached && cached.bundle.matches.length > 0) {
       this.metrics.stale++
+      recordCacheEvent(request.provider, 'stale')
       markPartialResult()
       void this.refresh(request, mode, cached.bundle).catch(() => undefined)
       return cached.bundle
     }
 
     this.metrics.miss++
+    recordCacheEvent(request.provider, 'miss')
     try {
       return await this.refresh(request, mode, cached?.bundle)
     } catch (error) {
       if (cached && cached.bundle.matches.length > 0) {
         this.metrics.stale++
+        recordCacheEvent(request.provider, 'stale')
         markPartialResult()
         return cached.bundle
       }
@@ -67,13 +78,14 @@ export class MetadataCache {
     await this.database.close()
   }
 
-  private async read(key: string) {
+  private async read(key: string, provider: string) {
     try {
       return await this.database.readBundle(key)
     } catch (error) {
       if (!(error instanceof DatabaseError) || error.code !== 'invalid-cache') throw error
       this.metrics.corrupt++
-      console.error('Discarding invalid cache entry:', key, error.message)
+      recordCacheEvent(provider, 'corrupt')
+      logger.warn('Discarding invalid cache entry', { provider })
       await this.database.deleteEntry(key)
       return null
     }
@@ -90,6 +102,7 @@ export class MetadataCache {
     const pending = this.pending.get(pendingKey)
     if (pending) {
       this.metrics.coalesced++
+      recordCacheEvent(request.provider, 'coalesced')
       return pending.then((bundle) => structuredClone(bundle))
     }
 
@@ -134,8 +147,9 @@ export class MetadataCache {
     } catch (error) {
       if (cacheResponse) {
         this.metrics.refreshError++
+        recordCacheEvent(request.provider, 'refreshError')
         this.failures.set(request.key, { error, until: Date.now() + 10000 })
-        console.warn(`Metadata refresh failed for ${request.provider}:`, error)
+        logger.warn('Metadata refresh failed', { provider: request.provider, ...errorAttributes(error) })
       }
       throw error
     }

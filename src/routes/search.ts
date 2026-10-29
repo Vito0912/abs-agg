@@ -1,9 +1,12 @@
 import type { Request, Response } from 'express'
 import { z } from 'zod'
+import { observeOperation, recordSearchResults } from '../telemetry/operations'
+import { errorAttributes, logger } from '../telemetry/logger'
 import { absMatches } from '../metadata/projection'
 import { enrichMetadata } from '../metadata/enrichment'
 import { dbManager } from '../database/manager'
 import type { MetadataBundle, MetadataQuery } from '../types'
+import { setRequestLogAttributes } from '../telemetry/context'
 
 const querySchema = z.object({
   title: z.string().trim().min(1).max(500),
@@ -31,7 +34,14 @@ async function search(req: Request): Promise<MetadataBundle> {
   const query = parseQuery(req)
   const params = { ...req.parsedParams }
 
-  const bundle = await req.provider.searchMetadata(query, params)
+  const provider = req.provider
+  const providerId = provider.getConfig().id
+  const bundle = await observeOperation('provider.search', { provider: providerId }, async () => {
+    const result = await provider.searchMetadata(query, params)
+    recordSearchResults(providerId, result.matches.length, result.complete)
+
+    return result
+  })
   const enrichmentEnabled = process.env.ENABLE_CROSS_PROVIDER_ENRICHMENT === 'true'
   if (!enrichmentEnabled || req.query.enrich === 'false') return bundle
 
@@ -41,18 +51,23 @@ async function search(req: Request): Promise<MetadataBundle> {
 export async function searchHandler(req: Request, res: Response): Promise<void> {
   try {
     const bundle = await search(req)
-    res.json({ matches: absMatches(bundle) })
+    const matches = absMatches(bundle)
+    setRequestLogAttributes({ 'search.returned_books': matches.length })
+    res.json({ matches })
   } catch (error) {
-    sendSearchError(error, res)
+    sendSearchError(error, req, res)
   }
 }
 
-function sendSearchError(error: unknown, res: Response): void {
+function sendSearchError(error: unknown, req: Request, res: Response): void {
   if (error instanceof InvalidSearchRequest) {
     res.status(400).json({ error: error.message, details: error.details.issues })
     return
   }
 
-  console.error('Provider request failed:', error)
+  logger.error('Provider request failed', {
+    provider: req.provider?.getConfig().id || 'none',
+    ...errorAttributes(error)
+  })
   res.status(500).json({ error: 'Metadata provider request failed' })
 }

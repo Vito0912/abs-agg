@@ -1,3 +1,4 @@
+import { errorAttributes, logger } from '../../telemetry/logger'
 import { mapConcurrent } from '../../utils/concurrency'
 import * as cheerio from 'cheerio'
 import type { BookMetadata, ParsedParameters, ProviderConfig } from '../../types'
@@ -41,7 +42,7 @@ export default class StoryGraphProvider extends BaseProvider {
       const details = await this.getBookById(result.id, params)
       return details || this.mapSearchResult(result)
     } catch (error) {
-      console.error(`Failed to fetch The StoryGraph book ${result.id}:`, error)
+      logger.error('Provider details failed', { provider: this.config.id, ...errorAttributes(error) })
       return this.mapSearchResult(result)
     }
   }

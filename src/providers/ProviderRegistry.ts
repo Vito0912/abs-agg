@@ -1,3 +1,4 @@
+import { errorAttributes, logger } from '../telemetry/logger'
 import { access, readdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { z } from 'zod'
@@ -62,6 +63,7 @@ export class ProviderRegistry {
         const provider = await this.instantiate(providerPath, config)
         if (provider) this.register(provider)
       } catch (error) {
+        logger.error('Provider registration failed', { provider: directory.name, ...errorAttributes(error) })
         throw new Error(`Failed to load provider ${directory.name}`, { cause: error })
       }
     }
@@ -79,7 +81,7 @@ export class ProviderRegistry {
     const missing = (config.requiredEnv || []).filter((name) => !process.env[name])
     if (missing.length === 0) return true
 
-    console.warn(`Provider ${config.id} disabled: missing ${missing.join(', ')}`)
+    logger.warn('Provider disabled: missing environment variables', { provider: config.id, missing })
     return false
   }
 

@@ -1,4 +1,6 @@
 import { Worker } from 'node:worker_threads'
+import { observeOperation } from '../telemetry/operations'
+import { handleWorkerLog } from '../telemetry/logger'
 import path from 'node:path'
 import { existsSync } from 'node:fs'
 import { z } from 'zod'
@@ -24,7 +26,11 @@ export class DatabaseManager {
 
   constructor(private readonly dbPath = cacheSettings.databasePath) {}
 
-  private async execute(command: DatabaseCommand): Promise<unknown> {
+  private execute(command: DatabaseCommand): Promise<unknown> {
+    return observeOperation('database.command', { operation: command.operation }, () => this.sendCommand(command))
+  }
+
+  private async sendCommand(command: DatabaseCommand): Promise<unknown> {
     if (this.failure) throw this.failure
     if (this.closing && command.operation !== 'close') throw new Error('Metadata database is closing')
 
@@ -163,6 +169,8 @@ export class DatabaseManager {
   }
 
   private receive(input: unknown): void {
+    if (handleWorkerLog(input)) return
+
     const result = databaseReplySchema.safeParse(input)
     if (!result.success) {
       this.fail(new Error('Invalid metadata database reply'))

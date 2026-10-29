@@ -1,3 +1,4 @@
+import { errorAttributes, logger } from '../telemetry/logger'
 import Database from 'better-sqlite3'
 import { Kysely, SqliteDialect, sql } from 'kysely'
 import { parentPort, workerData } from 'node:worker_threads'
@@ -112,7 +113,7 @@ async function startWorker(): Promise<void> {
 
   port.on('message', (input: unknown) => {
     void handleMessage(input).catch((error: unknown) => {
-      console.error('Database worker transport failed:', error)
+      logger.error('Database worker transport failed', { ...errorAttributes(error) })
       process.exitCode = 1
       port.close()
     })
@@ -135,7 +136,7 @@ async function startWorker(): Promise<void> {
 }
 
 void startWorker().catch((error: unknown) => {
-  console.error('Database worker startup failed:', error)
+  logger.error('Database worker startup failed', { ...errorAttributes(error) })
   process.exitCode = 1
   parentPort?.close()
 })

@@ -1,4 +1,6 @@
 import { dbManager } from '../database/manager'
+import { recordCacheEvent } from '../telemetry/operations'
+import { errorAttributes, logger } from '../telemetry/logger'
 import { DatabaseError } from '../database/errors'
 import { cacheMode, markPartialResult } from '../utils/requestContext'
 import { metadataBundleSchema } from '../types/metadata'
@@ -58,7 +60,10 @@ function pruneFailures(): void {
 
 async function refreshCatalog(request: CatalogRequest): Promise<MetadataBundle> {
   const existing = pending.get(request.key)
-  if (existing) return structuredClone(await existing)
+  if (existing) {
+    recordCacheEvent(request.provider, 'coalesced', 'catalog')
+    return structuredClone(await existing)
+  }
 
   pruneFailures()
   const failure = failures.get(request.key)
@@ -70,6 +75,7 @@ async function refreshCatalog(request: CatalogRequest): Promise<MetadataBundle> 
   try {
     return await refresh
   } catch (error) {
+    recordCacheEvent(request.provider, 'refreshError', 'catalog')
     failures.set(request.key, { until: Date.now() + (request.minimumRefreshIntervalMs ?? 10000), error })
     throw error
   } finally {
@@ -77,13 +83,14 @@ async function refreshCatalog(request: CatalogRequest): Promise<MetadataBundle> 
   }
 }
 
-async function readCatalog(key: string) {
+async function readCatalog(key: string, provider: string) {
   try {
     return await dbManager.readCatalog(key)
   } catch (error) {
     if (!(error instanceof DatabaseError) || error.code !== 'invalid-cache') throw error
 
-    console.warn('Discarding invalid catalog membership:', key)
+    recordCacheEvent(provider, 'corrupt', 'catalog')
+    logger.warn('Discarding invalid catalog membership', { provider })
     return null
   }
 }
@@ -99,8 +106,13 @@ export async function storedCatalog(
   const refreshKey = buildCacheKey({ ...identity, version: 0, type: 'catalog', name })
   const provider = identity.provider
   const forceRefresh = options.minimumRefreshIntervalMs === undefined && cacheMode() === 'refresh'
-  const cached = await readCatalog(key)
-  if (!forceRefresh && cached && Date.now() < cached.fresh_until) return cached.bundle
+  const cached = await readCatalog(key, provider)
+  if (!forceRefresh && cached && Date.now() < cached.fresh_until) {
+    recordCacheEvent(provider, 'fresh', 'catalog')
+    return cached.bundle
+  }
+
+  recordCacheEvent(provider, 'miss', 'catalog')
 
   try {
     return await refreshCatalog({ key, refreshKey, provider, ttlMs, load, previous: cached?.bundle, ...options })
@@ -108,7 +120,8 @@ export async function storedCatalog(
     if (!cached) throw error
 
     markPartialResult()
-    console.warn(`Serving stored ${provider} catalog after refresh failed:`, error)
+    recordCacheEvent(provider, 'stale', 'catalog')
+    logger.warn('Serving stored catalog after refresh failed', { provider, ...errorAttributes(error) })
     return { ...cached.bundle, complete: false }
   }
 }
