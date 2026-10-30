@@ -36,19 +36,19 @@ export async function migrateDatabase(sqlite: Database.Database, databasePath: s
   }
   if (version === 0) await ensureEmptyDatabase(database)
 
+  const recovery = backupPath ? ` A backup was retained at ${backupPath}.` : ''
   sqlite.pragma('foreign_keys = OFF')
   try {
     const result = await migrator.migrateToLatest()
     if (result.error) {
       const cause = result.error instanceof Error ? result.error : new Error(String(result.error))
-      const recovery = backupPath ? `; backup retained at ${backupPath}` : ''
       throw new Error(`Metadata migration failed: ${cause.message}${recovery}`, { cause })
     }
     if (
       sqlite.pragma('integrity_check', { simple: true }) !== 'ok' ||
       z.array(z.unknown()).parse(sqlite.pragma('foreign_key_check')).length !== 0
     ) {
-      throw new Error(`Migrated database validation failed${backupPath ? `; backup retained at ${backupPath}` : ''}`)
+      throw new Error(`Migrated database validation failed.${recovery}`)
     }
     if (pending.length > 0) {
       sqlite.exec('VACUUM')
@@ -78,7 +78,7 @@ async function ensureEmptyDatabase(database: MetadataDatabase): Promise<void> {
       table.name !== 'database_migration_lock'
   )
   if (applicationTables.length > 0)
-    throw new Error('Unversioned database is not empty; refusing automatic schema creation')
+    throw new Error('The unversioned database is not empty. Automatic schema creation was refused.')
 }
 
 export function openSqlite(databasePath: string, fileMustExist = false): Database.Database {

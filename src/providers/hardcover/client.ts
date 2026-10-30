@@ -1,7 +1,15 @@
 import { HardcoverClient as HardcoverSdkClient, ReadingFormat } from '@hardcover/sdk'
-import type { Book, BookHit, Edition } from '@hardcover/sdk'
+import type { Book, BookHit, Edition, RateLimitState } from '@hardcover/sdk'
 import { hardcoverBookSchema } from './schemas'
 import type { HardcoverBook } from './types'
+import { pauseProvider, runWithProviderCooldown } from '../rateLimit'
+
+function observeHardcoverRateLimit(state: RateLimitState): void {
+  if (state.daily?.remaining !== 0) return
+
+  const resetAfterMs = state.daily.resetSeconds === undefined ? undefined : state.daily.resetSeconds * 1000
+  pauseProvider('hardcover', resetAfterMs)
+}
 
 export class HardcoverClient {
   private readonly client: HardcoverSdkClient
@@ -12,29 +20,34 @@ export class HardcoverClient {
       userAgent: 'abs-agg/1.1.0',
       timeoutMs: 15000,
       maxRetries: 2,
-      batch: true
+      batch: true,
+      onRateLimit: observeHardcoverRateLimit
     })
   }
 
   async searchBooks(title: string, author: string | null, limit: number): Promise<BookHit[]> {
     const query = author ? `${title} ${author}` : title
-    const results = await this.client.search.books(query, { perPage: limit, page: 1 })
+    const results = await runWithProviderCooldown('hardcover', () =>
+      this.client.search.books(query, { perPage: limit, page: 1 })
+    )
 
     return results.hits.filter((book) => Number.isSafeInteger(book.id) && book.id > 0)
   }
 
   async books(id: number, searchHit: BookHit): Promise<HardcoverBook[]> {
-    const [book, editions] = await Promise.all([
-      this.client.books.get(id),
-      this.client.books.editions(id, { limit: 10 })
-    ])
-    if (!book) return []
+    return runWithProviderCooldown('hardcover', async () => {
+      const [book, editions] = await Promise.all([
+        this.client.books.get(id),
+        this.client.books.editions(id, { limit: 10 })
+      ])
+      if (!book) return []
 
-    const audioEdition = editions.items.find((edition) => edition.readingFormatId === ReadingFormat.Audiobook)
-    const ebookEditions = editions.items.filter((edition) => edition.readingFormatId === ReadingFormat.Ebook)
-    const adaptedBook = hardcoverBookSchema.parse(adaptBook(book, searchHit, audioEdition, ebookEditions))
+      const audioEdition = editions.items.find((edition) => edition.readingFormatId === ReadingFormat.Audiobook)
+      const ebookEditions = editions.items.filter((edition) => edition.readingFormatId === ReadingFormat.Ebook)
+      const adaptedBook = hardcoverBookSchema.parse(adaptBook(book, searchHit, audioEdition, ebookEditions))
 
-    return [adaptedBook]
+      return [adaptedBook]
+    })
   }
 }
 

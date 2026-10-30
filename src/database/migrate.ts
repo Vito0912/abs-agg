@@ -10,7 +10,6 @@ async function main(): Promise<void> {
   })
   if (values.help || positionals.length !== 1) {
     console.log('Usage: npm run db:migrate -- <database> [--output <new database>]')
-    console.log('Startup also migrates automatically. Successful migration backups are deleted; failures retain them.')
     if (!values.help) process.exitCode = 1
     return
   }

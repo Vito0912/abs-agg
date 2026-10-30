@@ -15,7 +15,8 @@ export class UpstreamError extends Error {
   constructor(
     message: string,
     readonly status?: number,
-    options?: ErrorOptions
+    options?: ErrorOptions,
+    readonly retryAfterMs?: number
   ) {
     super(message, options)
     this.name = 'UpstreamError'
@@ -100,7 +101,7 @@ function canRetry(error: unknown): boolean {
   if (error.code === 'ERR_UPSTREAM_DESTINATION' || error.code === 'ERR_FR_REDIRECTION_FAILURE') return false
   const status = error.response?.status
 
-  return status === 429 || status === 502 || status === 503 || status === 504 || !error.response
+  return status === 502 || status === 503 || status === 504 || !error.response
 }
 
 async function request<T>(config: AxiosRequestConfig): Promise<AxiosResponse<T>> {
@@ -119,14 +120,27 @@ async function request<T>(config: AxiosRequestConfig): Promise<AxiosResponse<T>>
     return await send<T>(config)
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      throw new UpstreamError('Upstream HTTP request failed', error.response?.status, {
-        cause: new Error(error.code || 'Upstream transport error')
-      })
+      throw new UpstreamError(
+        'Upstream HTTP request failed',
+        error.response?.status,
+        { cause: new Error(error.code || 'Upstream transport error') },
+        parseRetryAfterMs(error.response?.headers['retry-after'])
+      )
     }
     throw error
   } finally {
     release()
   }
+}
+
+export function parseRetryAfterMs(value: unknown): number | undefined {
+  if (typeof value !== 'string') return undefined
+
+  const seconds = Number(value)
+  const milliseconds = Number.isFinite(seconds) ? seconds * 1000 : Date.parse(value) - Date.now()
+  if (!Number.isFinite(milliseconds) || milliseconds < 0) return undefined
+
+  return milliseconds
 }
 
 async function send<T>(config: AxiosRequestConfig): Promise<AxiosResponse<T>> {

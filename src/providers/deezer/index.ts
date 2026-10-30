@@ -2,10 +2,22 @@ import { mapConcurrent } from '../../utils/concurrency'
 import { z } from 'zod'
 import type { BookMetadata, ParsedParameters, ProviderConfig } from '../../types'
 import { normalizeBookMetadata } from '../../utils/helpers'
-import { httpClient } from '../../utils/httpClient'
+import { httpClient, parseRetryAfterMs } from '../../utils/httpClient'
 import { BaseProvider } from '../BaseProvider'
+import { ProviderRateLimitError } from '../rateLimit'
 import { deezerAlbumDetailsSchema, deezerSearchAlbumSchema } from './schemas'
 import type { DeezerAlbumDetails, DeezerSearchAlbum } from './types'
+
+const deezerErrorSchema = z.object({
+  error: z.object({ code: z.number(), message: z.string() })
+})
+
+function throwIfRateLimited(data: unknown, retryAfterHeader: unknown): void {
+  const error = deezerErrorSchema.safeParse(data)
+  if (error.success && error.data.error.code === 4) {
+    throw new ProviderRateLimitError('deezer', error.data.error.message, parseRetryAfterMs(retryAfterHeader))
+  }
+}
 
 export default class DeezerProvider extends BaseProvider {
   constructor(config: ProviderConfig) {
@@ -22,6 +34,7 @@ export default class DeezerProvider extends BaseProvider {
     let searchUrl = `https://api.deezer.com/search/album?q=${encodeURIComponent(query)}&limit=${limit}${authParam}`
 
     let searchRes = await httpClient.get(searchUrl)
+    throwIfRateLimited(searchRes.data, searchRes.headers['retry-after'])
     let albums: DeezerSearchAlbum[] =
       searchRes.status === 200 ? z.object({ data: deezerSearchAlbumSchema.array() }).parse(searchRes.data).data : []
 
@@ -29,6 +42,7 @@ export default class DeezerProvider extends BaseProvider {
       const fallbackQuery = author ? `${title} ${author}` : title
       searchUrl = `https://api.deezer.com/search/album?q=${encodeURIComponent(fallbackQuery)}&limit=${limit}${authParam}`
       searchRes = await httpClient.get(searchUrl)
+      throwIfRateLimited(searchRes.data, searchRes.headers['retry-after'])
       albums =
         searchRes.status === 200 ? z.object({ data: deezerSearchAlbumSchema.array() }).parse(searchRes.data).data : []
     }
@@ -50,6 +64,7 @@ export default class DeezerProvider extends BaseProvider {
 
     if (response.status === 404) return null
     if (response.status !== 200) throw new Error(`Deezer details error: ${response.status}`)
+    throwIfRateLimited(response.data, response.headers['retry-after'])
 
     return this.mapDeezerToMetadata(deezerAlbumDetailsSchema.parse(response.data))
   }

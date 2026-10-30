@@ -5,6 +5,7 @@ import type { CacheIdentity } from '../cache/types'
 import { normalizeBooks } from '../metadata/normalize'
 import { markPartialResult } from '../utils/requestContext'
 import { bundleBooks } from '../metadata/projection'
+import { runWithProviderCooldown } from './rateLimit'
 import type {
   BookMetadata,
   EntityKind,
@@ -56,7 +57,7 @@ export abstract class BaseProvider {
       key,
       provider: this.config.id,
       ttlMs: cacheSettings.searchTtlMs,
-      load: () => this.searchEntities(query, params)
+      load: () => runWithProviderCooldown(this.config.id, () => this.searchEntities(query, params))
     })
 
     if (query.kind) {
@@ -125,7 +126,7 @@ export abstract class BaseProvider {
       key: buildCacheKey({ ...this.cacheIdentity, type: 'detail', kind, id, params }),
       provider: this.config.id,
       ttlMs: cacheSettings.detailTtlMs,
-      load
+      load: () => runWithProviderCooldown(this.config.id, load)
     })
   }
 }
