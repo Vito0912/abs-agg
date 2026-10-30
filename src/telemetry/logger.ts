@@ -76,9 +76,14 @@ export function errorAttributes(error: unknown): Attributes {
     attributes['error.code'] = error.code
   }
 
+  if ('message' in error && typeof error.message === 'string') {
+    attributes['error.message'] = error.message
+  }
+
   if (error instanceof z.ZodError) {
     attributes['validation.issue_count'] = error.issues.length
     attributes['validation.codes'] = [...new Set(error.issues.map((issue) => issue.code))]
+    attributes['validation.error'] = z.prettifyError(error)
   }
 
   return attributes
