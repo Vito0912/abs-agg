@@ -17,10 +17,10 @@ export function detailParameterKey(params: ParsedParameters): string {
   return parameterKey(detailParams)
 }
 
-export function sourceScope(params: ParsedParameters): string {
-  return JSON.stringify(
-    ['market', 'region', 'language', 'lang'].flatMap((key) => (params[key] === undefined ? [] : [[key, params[key]]]))
-  )
+export function sourceScope(params: ParsedParameters, identityParameters: string[] = []): string {
+  const parameters = [...new Set(identityParameters)].sort()
+
+  return JSON.stringify(parameters.flatMap((key) => (params[key] === undefined ? [] : [[key, params[key]]])))
 }
 
 export function entityId(provider: string, kind: string, sourceId: string, scope: string): string {

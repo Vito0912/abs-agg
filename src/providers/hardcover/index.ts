@@ -17,14 +17,14 @@ export default class HardcoverProvider extends BaseProvider {
 
   protected async searchBooks(title: string, author: string | null, params: ParsedParameters): Promise<BookMetadata[]> {
     const limit = Math.min(Number(params.limit) || 10, 25)
-    const ids = await this.client.searchIds(title, author, limit)
+    const books = await this.client.searchBooks(title, author, limit)
     const language = normalizeLanguage(typeof params.language === 'string' ? params.language : undefined)
 
-    const bundles = await mapConcurrent(ids, 3, (id) => {
-      return this.cachedMetadata('work', String(id), params, async () => {
-        const books = await this.client.books([id])
+    const bundles = await mapConcurrent(books, 3, (book) => {
+      return this.cachedMetadata('work', String(book.id), params, async () => {
+        const metadata = await this.client.books(book.id, book)
 
-        return normalizeBooks(books.flatMap(mapHardcoverBook), this.config.id, params)
+        return normalizeBooks(metadata.flatMap(mapHardcoverBook), this.config.id, params, this.config.identityScope)
       })
     })
 

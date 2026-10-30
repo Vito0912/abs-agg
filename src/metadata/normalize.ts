@@ -5,10 +5,15 @@ import { sourceScope } from './identity'
 import { createBookEntity, createSource } from './book'
 import { createRelatedAuthors, createRelatedChapters, createRelatedSeries, createRelatedWork } from './related'
 
-export function normalizeBooks(books: BookMetadata[], provider: string, params: ParsedParameters): MetadataBundle {
+export function normalizeBooks(
+  books: BookMetadata[],
+  provider: string,
+  params: ParsedParameters,
+  identityParameters: string[] = []
+): MetadataBundle {
   const entities = new Map<string, MetadataEntity>()
   const matches = new Set<string>()
-  const scope = sourceScope(params)
+  const scope = sourceScope(params, identityParameters)
 
   for (const input of books) {
     const book = bookMetadataSchema.parse(input)

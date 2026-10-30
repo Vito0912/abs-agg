@@ -10,9 +10,10 @@ function relatedFields(
   sourceId: string,
   name: string,
   stable: boolean,
-  scope = parent.source.scope
+  scope = parent.source.scope,
+  url?: string
 ) {
-  const source: MetadataSource = { ...parent.source, sourceId, scope, stable, quality: 'summary', url: undefined }
+  const source: MetadataSource = { ...parent.source, sourceId, scope, stable, quality: 'summary', url }
 
   return {
     schemaVersion: 1,
@@ -102,15 +103,24 @@ export function createRelatedChapters(book: BookMetadata, parent: MetadataEntity
   return (book.chapters || []).map((chapter, index) => {
     const sourceId = chapter.id || `${parent.source.sourceId}:chapter:${index}`
     const name = chapter.title || `Chapter ${index + 1}`
-    const fields = relatedFields(parent, 'chapter', sourceId, name, Boolean(chapter.id))
+    const fields = relatedFields(
+      parent,
+      'chapter',
+      sourceId,
+      name,
+      Boolean(chapter.id),
+      parent.source.scope,
+      chapter.sourceUrl
+    )
 
     const result = chapterSchema.parse({
       ...fields,
       relations: [{ type: 'chapterOf', targetId: parent.id }],
-      sequence: chapter.sequence ?? index + 1,
+      sequence: chapter.sequence,
       startSeconds: chapter.startSeconds,
       endSeconds: chapter.endSeconds,
-      timeline: chapter.startSeconds === undefined ? undefined : 'book'
+      timeline: chapter.timeline ?? (chapter.startSeconds === undefined ? undefined : 'book'),
+      fileId: chapter.fileId
     })
 
     parent.relations.push({ type: 'hasChapter', targetId: result.id })

@@ -9,6 +9,7 @@
   "addToAudiobookshelf": true,
   "description": "Fetches audiobook and ebook metadata from Nextory's public search API",
   "url": "https://nextory.com/",
+  "identityScope": ["market"],
   "parameters": [
     {
       "name": "type",

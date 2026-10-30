@@ -3,7 +3,48 @@ import { normalizeBookMetadata } from '../../utils/helpers'
 import { httpClient } from '../../utils/httpClient'
 import { BaseProvider } from '../BaseProvider'
 import { librivoxApiResponseSchema } from './schemas'
-import type { LibrivoxApiResponse, LibrivoxBook } from './types'
+import type { LibrivoxApiResponse, LibrivoxBook, LibrivoxSection } from './types'
+
+function mapSections(sections: LibrivoxSection[] | undefined): NonNullable<BookMetadata['chapters']> | undefined {
+  if (!sections) return undefined
+
+  let bookOffsetSeconds = 0
+  let bookTimelineAvailable = true
+
+  return sections.map((section, index) => {
+    const durationSeconds = Number(section.playtime)
+    const hasDuration = section.playtime.trim() !== '' && Number.isFinite(durationSeconds) && durationSeconds >= 0
+    const sectionNumber = Number(section.section_number)
+    const sequence = Number.isInteger(sectionNumber) && sectionNumber >= 0 ? sectionNumber : index + 1
+    let startSeconds: number | undefined
+    let endSeconds: number | undefined
+    let timeline: 'book' | 'file' | undefined
+
+    if (hasDuration && bookTimelineAvailable) {
+      startSeconds = bookOffsetSeconds
+      endSeconds = bookOffsetSeconds + durationSeconds
+      bookOffsetSeconds = endSeconds
+      timeline = 'book'
+    } else if (hasDuration) {
+      startSeconds = 0
+      endSeconds = durationSeconds
+      timeline = 'file'
+    } else {
+      bookTimelineAvailable = false
+    }
+
+    return {
+      id: section.id,
+      title: section.title,
+      sequence,
+      startSeconds,
+      endSeconds,
+      timeline,
+      fileId: section.id,
+      sourceUrl: section.listen_url || undefined
+    }
+  })
+}
 
 export default class LibrivoxProvider extends BaseProvider {
   private readonly baseUrl = 'https://librivox.org/api/feed/audiobooks'
@@ -131,11 +172,7 @@ export default class LibrivoxProvider extends BaseProvider {
           })),
           ...narratorList.map((name) => ({ name, role: 'narrator' }))
         ],
-        chapters: book.sections?.map((section, index) => ({
-          id: section.id,
-          title: section.title,
-          sequence: index + 1
-        })),
+        chapters: mapSections(book.sections),
         publishedYear: book.copyright_year
       }),
       bookId: book.id

@@ -20,7 +20,7 @@ export const librivoxSectionSchema = z.object({
   id: z.string(),
   section_number: z.string(),
   title: z.string(),
-  listen_url: z.string().nullish(),
+  listen_url: z.url().nullish(),
   language: z.string(),
   playtime: z.string(),
   file_name: z

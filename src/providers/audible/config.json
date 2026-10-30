@@ -9,6 +9,7 @@
   "addToAudiobookshelf": false,
   "description": "Audiobook metadata from Audible's public catalog, with marketplace-specific identifiers and ratings",
   "url": "https://www.audible.com/",
+  "identityScope": ["region"],
   "parameters": [
     {
       "name": "region",

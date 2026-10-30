@@ -64,13 +64,64 @@ export class IdentityRepository {
   }
 
   async register(entity: MetadataEntity): Promise<number> {
-    const entityKey = await this.reference(entity.id, entity.source.provider, entity.kind)
     const sourceIdentifier = await this.identifier({
       scheme: 'provider',
       namespace: entity.source.provider,
       value: entity.source.sourceId
     })
     const scopeKey = await this.scope(entity.source.scope)
+    const sourceRows = await this.database
+      .selectFrom('source_entities')
+      .select(['entity_key', 'public_id', 'scope_key'])
+      .where('provider', '=', entity.source.provider)
+      .where('kind', '=', entity.kind)
+      .where('source_identifier', '=', sourceIdentifier)
+      .execute()
+    const exactMatches = sourceRows.filter((row) => row.scope_key === scopeKey)
+
+    if (exactMatches.length > 1) {
+      throw new Error(
+        `Multiple catalog identities already exist for ${entity.source.provider} ${entity.kind} ${entity.source.sourceId}`
+      )
+    }
+
+    const existingById = await this.database
+      .selectFrom('source_entities')
+      .select(['entity_key', 'source_identifier', 'scope_key'])
+      .where('public_id', '=', entity.id)
+      .executeTakeFirst()
+
+    let entityKey: number
+    if (exactMatches.length === 1) {
+      entityKey = exactMatches[0].entity_key
+      if (existingById && existingById.entity_key !== entityKey) {
+        throw new Error(`Catalog identity ${entity.id} conflicts with an existing entity`)
+      }
+    } else {
+      const scopeParameters = parametersSchema.parse(JSON.parse(entity.source.scope))
+      const legacyMatches = scopeParameters.length === 0 ? sourceRows : []
+
+      if (legacyMatches.length > 1) {
+        throw new Error(
+          `Cannot reconcile ambiguous scoped identities for ${entity.source.provider} ${entity.kind} ${entity.source.sourceId}`
+        )
+      }
+
+      if (legacyMatches.length === 1) {
+        entityKey = legacyMatches[0].entity_key
+        if (existingById && existingById.entity_key !== entityKey) {
+          throw new Error(`Catalog identity ${entity.id} conflicts with an existing entity`)
+        }
+      } else if (existingById) {
+        if (existingById.source_identifier !== null || existingById.scope_key !== null) {
+          throw new Error(`Catalog identity ${entity.id} is already assigned to a different source record`)
+        }
+        entityKey = existingById.entity_key
+      } else {
+        entityKey = await this.reference(entity.id, entity.source.provider, entity.kind)
+      }
+    }
+
     await this.database
       .updateTable('source_entities')
       .set({

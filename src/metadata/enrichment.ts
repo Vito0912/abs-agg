@@ -37,13 +37,13 @@ function identifierKey(identifier: Identifier): string {
   return JSON.stringify([canonical.scheme, canonical.value, canonical.namespace || '', canonical.marketplace || ''])
 }
 
-function sharedIdentifier(target: BookEntity, donor: BookEntity): Identifier | undefined {
-  const donorKeys = new Set(donor.identifiers.map(identifierKey))
+function hasIdentifier(target: BookEntity, donor: BookEntity, identifier: Identifier): boolean {
+  const key = identifierKey(identifier)
 
-  return target.identifiers.find((identifier) => {
-    if (!enrichmentIdentifier(identifier)) return false
-    return donorKeys.has(identifierKey(identifier))
-  })
+  return (
+    target.identifiers.some((candidate) => identifierKey(candidate) === key) &&
+    donor.identifiers.some((candidate) => identifierKey(candidate) === key)
+  )
 }
 
 function hasIdentifierConflict(target: BookEntity, donor: BookEntity): boolean {
@@ -63,7 +63,35 @@ function peopleKey(entity: BookEntity, role: 'author' | 'narrator'): string {
   return [...new Set(names)].sort().join('|')
 }
 
-function canEnrich(target: BookEntity, donor: BookEntity): boolean {
+function claimsConflict(left: BookEntity, right: BookEntity): boolean {
+  if (left.kind !== right.kind) return false
+  if (normalizeText(left.name) !== normalizeText(right.name)) return true
+
+  const leftAuthors = peopleKey(left, 'author')
+  const rightAuthors = peopleKey(right, 'author')
+  if (leftAuthors && rightAuthors && leftAuthors !== rightAuthors) return true
+  if (left.language && right.language && left.language !== right.language) return true
+
+  return (
+    left.kind === 'book' &&
+    right.kind === 'book' &&
+    Boolean(left.format && right.format && left.format !== right.format)
+  )
+}
+
+function hasConflictingClaims(records: MetadataEntity[]): boolean {
+  const books = records.filter((entity): entity is BookEntity => 'contributors' in entity)
+
+  for (let index = 0; index < books.length; index++) {
+    for (let otherIndex = index + 1; otherIndex < books.length; otherIndex++) {
+      if (claimsConflict(books[index], books[otherIndex])) return true
+    }
+  }
+
+  return false
+}
+
+function canEnrich(target: BookEntity, donor: BookEntity, evidence: Identifier): boolean {
   if (target.kind !== donor.kind || target.source.provider === donor.source.provider) return false
   if (!target.source.stable || !donor.source.stable) return false
   if (hasInvalidIdentifiers(target) || hasInvalidIdentifiers(donor)) return false
@@ -72,7 +100,7 @@ function canEnrich(target: BookEntity, donor: BookEntity): boolean {
 
   const targetAuthors = peopleKey(target, 'author')
   if (!targetAuthors || targetAuthors !== peopleKey(donor, 'author')) return false
-  if (hasIdentifierConflict(target, donor) || !sharedIdentifier(target, donor)) return false
+  if (hasIdentifierConflict(target, donor) || !hasIdentifier(target, donor, evidence)) return false
 
   if (target.kind === 'book' && donor.kind === 'book') {
     if (!target.format || target.format !== donor.format) return false
@@ -109,27 +137,38 @@ async function enrichEntity(target: BookEntity, providers: string[], database: I
     const eligible = enrichmentIdentifier(identifier)
     return eligible ? [eligible] : []
   })
-  const candidates = new Map<string, BookEntity>()
+  const candidates = new Map<string, { entity: BookEntity; evidence: Identifier }>()
 
   for (const identifier of identifiers.slice(0, 4)) {
     const records = await database.findIdentifier(identifier, providers)
     if (records.length >= 100) return
+    if (hasConflictingClaims(records)) continue
 
     for (const record of records) {
-      if ('contributors' in record && canEnrich(target, record)) candidates.set(record.id, record)
+      if (
+        'contributors' in record &&
+        hasIdentifier(target, record, identifier) &&
+        canEnrich(target, record, identifier)
+      ) {
+        candidates.set(record.id, { entity: record, evidence: identifier })
+      }
     }
   }
 
-  const donor = descriptionDonor(target, [...candidates.values()])
+  const donorCandidate = descriptionDonor(
+    target,
+    [...candidates.values()].map((candidate) => candidate.entity)
+  )
+  const donor = donorCandidate ? candidates.get(donorCandidate.id) : undefined
   if (!donor) return
-  const evidence = sharedIdentifier(target, donor)
+  const evidence = donor.evidence
   if (!evidence || (evidence.scheme !== 'isbn' && evidence.scheme !== 'asin')) return
 
-  target.description = donor.description
+  target.description = donor.entity.description
   target.provenance.description = {
-    provider: donor.source.provider,
-    entityId: donor.id,
-    fetchedAt: donor.source.fetchedAt,
+    provider: donor.entity.source.provider,
+    entityId: donor.entity.id,
+    fetchedAt: donor.entity.source.fetchedAt,
     evidence: evidence.scheme
   }
 }

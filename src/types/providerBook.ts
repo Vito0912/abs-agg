@@ -69,7 +69,10 @@ export const bookMetadataSchema = z.object({
         title: z.string(),
         sequence: z.number().int().nonnegative().optional(),
         startSeconds: z.number().nonnegative().optional(),
-        endSeconds: z.number().nonnegative().optional()
+        endSeconds: z.number().nonnegative().optional(),
+        timeline: z.enum(['book', 'file']).optional(),
+        fileId: z.string().optional(),
+        sourceUrl: z.url().optional()
       })
     )
     .optional()

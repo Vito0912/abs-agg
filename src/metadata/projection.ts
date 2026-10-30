@@ -60,7 +60,10 @@ function relatedChapters(entity: BookEntity, entities: Map<string, MetadataEntit
       title: chapter.name,
       sequence: chapter.sequence,
       startSeconds: chapter.startSeconds,
-      endSeconds: chapter.endSeconds
+      endSeconds: chapter.endSeconds,
+      timeline: chapter.timeline,
+      fileId: chapter.fileId,
+      sourceUrl: chapter.source.url
     })
   }
   return chapters.sort((left, right) => (left.sequence || 0) - (right.sequence || 0))

@@ -1,4 +1,4 @@
-FROM node:22-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
@@ -14,7 +14,7 @@ RUN npm run build && \
     npm prune --omit=dev --no-audit --no-fund && \
     find dist node_modules -type f \( -name '*.map' -o -name '*.d.ts' -o -name '*.d.cts' -o -name '*.d.mts' \) -delete
 
-FROM node:22-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 

@@ -3,13 +3,11 @@ import type {
   hardcoverAuthorSchema,
   hardcoverBookSchema,
   hardcoverBookSeriesSchema,
-  hardcoverBooksResponseSchema,
   hardcoverContributionSchema,
   hardcoverEditionSchema,
   hardcoverImageSchema,
   hardcoverLanguageSchema,
   hardcoverPublisherSchema,
-  hardcoverSearchResponseSchema,
   hardcoverSeriesSchema,
   hardcoverTagSchema,
   hardcoverTaggingSchema
@@ -26,5 +24,3 @@ export type HardcoverTag = z.infer<typeof hardcoverTagSchema>
 export type HardcoverTagging = z.infer<typeof hardcoverTaggingSchema>
 export type HardcoverEdition = z.infer<typeof hardcoverEditionSchema>
 export type HardcoverBook = z.infer<typeof hardcoverBookSchema>
-export type HardcoverSearchResponse = z.infer<typeof hardcoverSearchResponseSchema>
-export type HardcoverBooksResponse = z.infer<typeof hardcoverBooksResponseSchema>

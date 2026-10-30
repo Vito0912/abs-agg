@@ -76,7 +76,7 @@ export abstract class BaseProvider {
 
   protected async searchEntities(query: MetadataQuery, params: ParsedParameters): Promise<MetadataBundle> {
     const books = await this.searchBooks(query.title, query.author || null, params)
-    return normalizeBooks(books, this.config.id, params)
+    return normalizeBooks(books, this.config.id, params, this.config.identityScope)
   }
 
   protected async searchBooks(
@@ -111,7 +111,7 @@ export abstract class BaseProvider {
       const book = await load()
       const books = book ? [{ ...book, bookId: book.bookId || bookId }] : []
 
-      return normalizeBooks(books, this.config.id, params)
+      return normalizeBooks(books, this.config.id, params, this.config.identityScope)
     })
   }
 

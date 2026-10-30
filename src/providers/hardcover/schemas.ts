@@ -297,25 +297,3 @@ export const hardcoverBookSchema = z.object({
     .transform((value) => value ?? undefined)
     .optional()
 })
-
-export const hardcoverSearchResponseSchema = z.object({
-  search: z
-    .object({
-      ids: z
-        .array(z.union([z.number(), z.string()]))
-        .nullish()
-        .transform((value) => value ?? undefined)
-        .optional()
-    })
-    .nullish()
-    .transform((value) => value ?? undefined)
-    .optional()
-})
-
-export const hardcoverBooksResponseSchema = z.object({
-  books: z
-    .array(hardcoverBookSchema)
-    .nullish()
-    .transform((value) => value ?? undefined)
-    .optional()
-})

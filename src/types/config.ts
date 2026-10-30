@@ -27,17 +27,31 @@ export const providerParameterSchema = z
     }
   })
 
-export const providerConfigSchema = z.object({
-  id: z.string().regex(/^[a-z][a-z0-9-]*$/),
-  name: z.string().min(1),
-  provider: z.object({ name: z.string().min(1), url: z.url().optional() }),
-  credits: z.array(z.object({ url: z.url() })).optional(),
-  available: z.boolean().optional(),
-  addToAudiobookshelf: z.boolean().optional(),
-  description: z.string(),
-  url: z.string(),
-  parameters: z.array(providerParameterSchema),
-  returnedFields: z.array(absBookSchema.keyof()),
-  comments: z.array(z.string()),
-  requiredEnv: z.array(z.string()).optional()
-})
+export const providerConfigSchema = z
+  .object({
+    id: z.string().regex(/^[a-z][a-z0-9-]*$/),
+    name: z.string().min(1),
+    provider: z.object({ name: z.string().min(1), url: z.url().optional() }),
+    credits: z.array(z.object({ url: z.url() })).optional(),
+    available: z.boolean().optional(),
+    addToAudiobookshelf: z.boolean().optional(),
+    description: z.string(),
+    url: z.string(),
+    identityScope: z.array(z.string().min(1)).default([]),
+    parameters: z.array(providerParameterSchema),
+    returnedFields: z.array(absBookSchema.keyof()),
+    comments: z.array(z.string()),
+    requiredEnv: z.array(z.string()).optional()
+  })
+  .superRefine((config, context) => {
+    const parameterNames = new Set(config.parameters.map((parameter) => parameter.name))
+    for (const [index, name] of config.identityScope.entries()) {
+      if (!parameterNames.has(name)) {
+        context.addIssue({
+          code: 'custom',
+          path: ['identityScope', index],
+          message: `Identity scope parameter "${name}" is not declared in parameters`
+        })
+      }
+    }
+  })
