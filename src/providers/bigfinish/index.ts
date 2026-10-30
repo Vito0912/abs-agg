@@ -54,7 +54,7 @@ export default class BigFinishProvider extends BaseProvider {
 
       const productUrl = `${BASE_URL}/releases/v/${hit.release_slug}`
 
-      const metadata = await this.cachedBook(productUrl, params, async () => {
+      const metadata = await this.cachedBook(String(hit.id), params, async () => {
         const pageRes = await httpClient.get(productUrl, {
           headers: RSC_HEADERS,
           responseType: 'text'
@@ -84,15 +84,20 @@ export default class BigFinishProvider extends BaseProvider {
     const authors = this.namesFrom(releaseData.written_by)
     const rawDetails = releaseData.production_credits?.technical_details
     const technicalDetails = z.record(z.string(), z.unknown()).optional().parse(rawDetails)
-    const duration =
+    let duration =
       technicalDetails?.duration_digital_verified_minutes ||
       technicalDetails?.duration_physical_verified_minutes ||
       hit.duration
-    const isbn = technicalDetails?.digital_retail_isbn || technicalDetails?.physical_retail_isbn
+    if (duration && isNaN(Number(duration))) {
+      duration = null
+    }
+    let isbn = technicalDetails?.digital_retail_isbn || technicalDetails?.physical_retail_isbn
+    if (typeof isbn === 'string' && isbn === 'N/A') isbn = null
     const description = this.resolveRscText(rsc, releaseData.about?.summary) || hit.description || null
 
     return {
       schemaVersion: 3,
+      id: String(hit.id),
       url,
       title: releaseData.title || hit.name || null,
       series: this.formatSeries(releaseData.range || titleParts.series),
@@ -234,13 +239,14 @@ export default class BigFinishProvider extends BaseProvider {
 
     return normalizeBookMetadata({
       title: data.title,
-      bookId: data.url,
+      bookId: data.id,
+      sourceUrl: data.url,
       format: 'audiobook',
-      author: data.writtenBy,
-      narrator: data.narratedBy,
-      description: data.about,
-      cover: data.coverUrl,
-      isbn: data.isbn,
+      author: data.writtenBy ?? undefined,
+      narrator: data.narratedBy ?? undefined,
+      description: data.about ?? undefined,
+      cover: data.coverUrl ?? undefined,
+      isbn: data.isbn ?? undefined,
       series,
       language: 'en',
       publishedYear,

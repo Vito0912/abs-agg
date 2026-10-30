@@ -4,7 +4,7 @@ import { observeOperation, recordSearchResults } from '../telemetry/operations'
 import { errorAttributes, logger } from '../telemetry/logger'
 import { absMatches } from '../metadata/projection'
 import { enrichMetadata } from '../metadata/enrichment'
-import { dbManager } from '../database/manager'
+import { availableCatalogProviders } from '../metadata/catalog-providers'
 import type { MetadataBundle, MetadataQuery } from '../types'
 import { setRequestLogAttributes } from '../telemetry/context'
 
@@ -47,7 +47,7 @@ async function search(req: Request): Promise<MetadataBundle> {
   const enrichmentEnabled = process.env.ENABLE_CROSS_PROVIDER_ENRICHMENT === 'true'
   if (!enrichmentEnabled || req.query.enrich === 'false') return bundle
 
-  return enrichMetadata(bundle, await dbManager.catalogProviders())
+  return enrichMetadata(bundle, await availableCatalogProviders())
 }
 
 export async function searchHandler(req: Request, res: Response): Promise<void> {

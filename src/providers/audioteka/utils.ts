@@ -1,6 +1,8 @@
 import * as cheerio from 'cheerio'
 import type { AudiotekaFullMetadata, AudiotekaLanguageConfig, AudiotekaSearchMatch } from './types'
 import { resolveProviderUrl } from '../../utils/outboundPolicy'
+import { urlPathId } from '../../metadata/identity'
+import { audiotekaProductIds } from './identity'
 
 const BASE_URL = 'https://audioteka.com'
 
@@ -154,6 +156,7 @@ export function extractLabeledArray($: cheerio.CheerioAPI, labels: string[]): st
 
 export function parseSearchResults($: cheerio.CheerioAPI): AudiotekaSearchMatch[] {
   const matches: AudiotekaSearchMatch[] = []
+  const productIds = audiotekaProductIds($)
   const $books = $('li[class*="teaser_teaser__"]')
 
   $books.each((_, element) => {
@@ -166,11 +169,12 @@ export function parseSearchResults($: cheerio.CheerioAPI): AudiotekaSearchMatch[
     const cover = cleanCoverUrl($book.find('[class*="teaser_coverImage__"]').attr('src'))
     const rating = parseFloat($book.find('[class*="teaser-footer_rating__"]').text().trim()) || undefined
 
-    const id = $book.attr('data-item-id') || bookUrl.split('/').pop() || ''
+    const slug = bookUrl ? new URL(bookUrl).pathname.split('/').filter(Boolean).pop() : undefined
+    const id = $book.attr('data-item-id') || (slug ? productIds.get(slug) : undefined)
 
     if (title && bookUrl && author) {
       matches.push({
-        id,
+        id: id || urlPathId(bookUrl),
         title,
         authors: [author],
         url: bookUrl,

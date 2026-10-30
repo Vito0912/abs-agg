@@ -2,9 +2,9 @@
 
 A metadata provider server for [Audiobookshelf](https://github.com/advplyr/audiobookshelf). Aggregates audiobook metadata from multiple sources through a unified API.
 
-This currently does not mean it connects them between providers. This might be added in the future.
-
 abs-agg named after "aggregate" and the German "AGG", because each provider should be usable as the others.
+
+> This project actively uses LLMs for development and testing purposes
 
 ## Supported metadata providers
 

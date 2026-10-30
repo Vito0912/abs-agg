@@ -5,7 +5,13 @@ import path from 'node:path'
 import { existsSync } from 'node:fs'
 import { z } from 'zod'
 import { cacheSettings } from '../config'
-import { cachedBundleSchema, cachedCatalogSchema, databaseStatsSchema, databaseReplySchema } from './protocol'
+import {
+  cachedBundleSchema,
+  cachedCatalogSchema,
+  databaseStatsSchema,
+  databaseReplySchema,
+  databaseReadySchema
+} from './protocol'
 import { metadataEntitySchema } from '../types/metadata'
 import type { DatabaseCommand, SearchCandidatesCommand, StoreCatalogCommand } from './protocol'
 import { DatabaseError } from './errors'
@@ -19,6 +25,10 @@ interface PendingCommand {
 
 export class DatabaseManager {
   private worker?: Worker
+  private ready?: Promise<void>
+  private resolveReady?: () => void
+  private rejectReady?: (error: Error) => void
+  private startupTimeout?: NodeJS.Timeout
   private failure?: Error
   private closing = false
   private nextId = 0
@@ -35,8 +45,11 @@ export class DatabaseManager {
     if (this.closing && command.operation !== 'close') throw new Error('Metadata database is closing')
 
     const worker = this.getWorker()
-    const id = ++this.nextId
     worker.ref()
+    await this.ready
+    if (this.failure) throw this.failure
+
+    const id = ++this.nextId
 
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
@@ -147,6 +160,16 @@ export class DatabaseManager {
   private getWorker(): Worker {
     if (this.worker) return this.worker
 
+    this.ready = new Promise<void>((resolve, reject) => {
+      this.resolveReady = resolve
+      this.rejectReady = reject
+    })
+    this.startupTimeout = setTimeout(() => {
+      this.fail(new Error('Metadata database initialization timed out'))
+      void this.worker?.terminate()
+    }, 300000)
+    this.startupTimeout.unref()
+
     const compiledPath = path.join(__dirname, 'worker.js')
     const options = { workerData: { dbPath: this.dbPath } }
     if (existsSync(compiledPath)) {
@@ -170,6 +193,13 @@ export class DatabaseManager {
 
   private receive(input: unknown): void {
     if (handleWorkerLog(input)) return
+    if (databaseReadySchema.safeParse(input).success) {
+      if (this.startupTimeout) clearTimeout(this.startupTimeout)
+      this.resolveReady?.()
+      this.resolveReady = undefined
+      this.rejectReady = undefined
+      return
+    }
 
     const result = databaseReplySchema.safeParse(input)
     if (!result.success) {
@@ -190,6 +220,10 @@ export class DatabaseManager {
 
   private fail(error: Error): void {
     this.failure = error
+    if (this.startupTimeout) clearTimeout(this.startupTimeout)
+    this.rejectReady?.(error)
+    this.rejectReady = undefined
+    this.resolveReady = undefined
     for (const pending of this.pending.values()) {
       clearTimeout(pending.timeout)
       pending.reject(error)

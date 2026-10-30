@@ -1,20 +1,22 @@
 import type { BookMetadata, Contributor, MetadataEntity, MetadataSource } from '../types'
 import { metadataEntitySchema } from '../types/metadata'
-import { bookIdentifiers, entityId, normalizeLanguage, stableHash } from './identity'
+import { bookIdentifiers, entityId, normalizeLanguage, stableHash, urlPathId } from './identity'
 import { publicationDate } from './dates'
 import { htmlSanitizer } from '../utils/sanitizer'
 
 export function createSource(book: BookMetadata, provider: string, scope: string): MetadataSource {
-  const sourceId = book.bookId || `unresolved:${stableHash([book.title, book.author, book.isbn, book.asin])}`
+  const suppliedId = book.bookId
+  const urlIdentifier = suppliedId && /^https?:\/\//.test(suppliedId) ? suppliedId : undefined
+  const { fetchedAt: _fetchedAt, quality: _quality, ...identityFields } = book
+  const sourceId = urlIdentifier ? urlPathId(urlIdentifier) : suppliedId || `unresolved:${stableHash(identityFields)}`
 
-  let url: string | undefined
-  if (/^https?:\/\//.test(sourceId)) url = sourceId
+  const url = book.sourceUrl || urlIdentifier
 
   return {
     provider,
     sourceId,
     scope,
-    stable: Boolean(book.bookId),
+    stable: Boolean(suppliedId) && book.sourceIdStable !== false,
     fetchedAt: book.fetchedAt ?? Date.now(),
     url,
     quality: book.quality || 'detail'

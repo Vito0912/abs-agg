@@ -1,9 +1,13 @@
 import type { MetadataBundle, MetadataEntity } from '../types'
 import type { MetadataDatabase } from './tables'
-import { stableHash } from '../metadata/identity'
+import { MetadataVersionWriter } from './version-writer'
 
 export class EntityRepository {
-  constructor(private readonly database: MetadataDatabase) {}
+  private readonly versions: MetadataVersionWriter
+
+  constructor(private readonly database: MetadataDatabase) {
+    this.versions = new MetadataVersionWriter(database)
+  }
 
   async ingestMetadata(bundle: MetadataBundle, generation: number, startedAt: number): Promise<boolean> {
     return this.database.transaction().execute(async (transaction) => {
@@ -21,73 +25,52 @@ export class EntityRepository {
     })
   }
 
-  async storeSnapshot(entity: MetadataEntity): Promise<string> {
-    const payload = JSON.stringify(entity)
-    const revision = stableHash({ ...entity, source: { ...entity.source, fetchedAt: 0 } })
-
-    await this.database
-      .insertInto('snapshots')
-      .values({
-        revision,
-        entity_id: entity.id,
-        payload,
-        created_at: Date.now()
-      })
-      .onConflict((conflict) => conflict.doNothing())
-      .execute()
-
-    return revision
+  async storeVersion(entity: MetadataEntity): Promise<number> {
+    return this.versions.store(entity)
   }
 
-  async updateCatalog(entity: MetadataEntity, startedAt: number): Promise<void> {
-    const quality = entity.source.quality === 'detail' ? 1 : 0
-    const observationStartedAt = Math.min(entity.source.fetchedAt, startedAt)
+  async updateCatalog(entity: MetadataEntity, startedAt: number, storedAt = Date.now()): Promise<void> {
     const previous = await this.database
-      .selectFrom('entities')
-      .select(['quality', 'fetched_at'])
-      .where('id', '=', entity.id)
+      .selectFrom('source_entities as entity')
+      .innerJoin('catalog_entities as catalog', 'catalog.entity_key', 'entity.entity_key')
+      .innerJoin('entity_versions as version', 'version.version_key', 'catalog.version_key')
+      .select(['catalog.observed_at', 'version.detail_level'])
+      .where('entity.public_id', '=', entity.id)
       .executeTakeFirst()
+    const observedAt = Math.min(entity.source.fetchedAt, startedAt)
+    if (
+      previous &&
+      (previous.observed_at > observedAt || (previous.detail_level === 'detail' && entity.source.quality === 'summary'))
+    )
+      return
 
-    if (previous && (previous.fetched_at > observationStartedAt || previous.quality > quality)) return
-
-    const contributors = 'contributors' in entity ? entity.contributors : []
+    const versionKey = await this.versions.store(entity)
+    const version = await this.database
+      .selectFrom('entity_versions')
+      .select('entity_key')
+      .where('version_key', '=', versionKey)
+      .executeTakeFirstOrThrow()
     const values = {
-      id: entity.id,
-      provider: entity.source.provider,
-      kind: entity.kind,
-      name: entity.name,
-      authors: contributors.map((person) => person.name).join(' '),
-      scope: entity.source.scope,
-      payload: JSON.stringify(entity),
-      quality,
-      fetched_at: observationStartedAt,
-      stored_at: Date.now()
+      entity_key: version.entity_key,
+      version_key: versionKey,
+      observed_at: observedAt,
+      fetched_at: entity.source.fetchedAt,
+      stored_at: storedAt
     }
-
     await this.database
-      .insertInto('entities')
+      .insertInto('catalog_entities')
       .values(values)
-      .onConflict((conflict) => conflict.column('id').doUpdateSet(values))
+      .onConflict((conflict) => conflict.column('entity_key').doUpdateSet(values))
       .execute()
-    await this.replaceIdentifiers(entity)
+    await this.updateSearchIndex(version.entity_key, entity)
   }
 
-  private async replaceIdentifiers(entity: MetadataEntity): Promise<void> {
-    await this.database.deleteFrom('identifiers').where('entity_id', '=', entity.id).execute()
-    if (entity.identifiers.length === 0) return
-
-    const identifiers = entity.identifiers.map((identifier) => ({
-      entity_id: entity.id,
-      scheme: identifier.scheme,
-      value: identifier.value,
-      namespace: identifier.namespace || '',
-      marketplace: identifier.marketplace || ''
-    }))
-
-    await this.database
-      .insertInto('identifiers')
-      .values(identifiers)
-      .onConflict((conflict) => conflict.doNothing())
-      .execute()
+  private async updateSearchIndex(entityKey: number, entity: MetadataEntity): Promise<void> {
+    const contributors = 'contributors' in entity ? entity.contributors : []
+    const authors = [...new Set(contributors.map((person) => person.name))].join(' ')
+    await this.database.deleteFrom('metadata_fts').where('rowid', '=', entityKey).execute()
+    await this.database.deleteFrom('metadata_trigrams').where('rowid', '=', entityKey).execute()
+    await this.database.insertInto('metadata_fts').values({ rowid: entityKey, name: entity.name, authors }).execute()
+    await this.database.insertInto('metadata_trigrams').values({ rowid: entityKey, name: entity.name }).execute()
   }
 }

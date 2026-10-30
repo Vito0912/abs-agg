@@ -7,7 +7,6 @@ import { searchSoundboothCatalog } from './search'
 import type { SoundboothCatalogIndex } from './types'
 
 export default class SoundboothTheaterProvider extends BaseProvider {
-  override readonly adapterVersion = 2
   private catalog?: SoundboothCatalogIndex
   private catalogLoadedAt = 0
   private pendingCatalog?: Promise<SoundboothCatalogIndex>

@@ -12,8 +12,6 @@ const origin = 'https://www.skoobe.de'
 const headers = { Accept: 'text/html' }
 
 export default class SkoobeProvider extends BaseProvider {
-  override readonly adapterVersion = 2
-
   protected async searchBooks(title: string, author: string | null, params: ParsedParameters): Promise<BookMetadata[]> {
     const limitDefault = this.config.parameters.find((parameter) => parameter.name === 'limit')?.default
     const limit = z.coerce

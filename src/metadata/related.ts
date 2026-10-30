@@ -1,16 +1,23 @@
 import type { Author, BookMetadata, Chapter, MetadataEntity, MetadataSource, Series, Work } from '../types'
 import { authorSchema, chapterSchema, seriesSchema, workSchema } from '../types/metadata'
-import { entityId } from './identity'
+import { entityId, stableHash } from './identity'
 import { publicationDate } from './dates'
 import { sanitizeDescription } from './book'
 
-function relatedFields(parent: MetadataEntity, kind: string, sourceId: string, name: string, stable: boolean) {
-  const source: MetadataSource = { ...parent.source, sourceId, stable, quality: 'summary' }
+function relatedFields(
+  parent: MetadataEntity,
+  kind: string,
+  sourceId: string,
+  name: string,
+  stable: boolean,
+  scope = parent.source.scope
+) {
+  const source: MetadataSource = { ...parent.source, sourceId, scope, stable, quality: 'summary', url: undefined }
 
   return {
     schemaVersion: 1,
     kind,
-    id: entityId(source.provider, kind, sourceId, source.scope),
+    id: entityId(source.provider, kind, sourceId, scope),
     name,
     language: parent.language,
     identifiers: [],
@@ -49,9 +56,11 @@ export function createRelatedAuthors(book: BookMetadata, parent: MetadataEntity)
 
   const authors: Author[] = []
   for (const contributor of parent.contributors) {
-    if (!contributor.sourceId) continue
+    if (contributor.authorId && !contributor.sourceId) continue
 
-    const fields = relatedFields(parent, 'author', contributor.sourceId, contributor.name, true)
+    const sourceId = contributor.sourceId || `name:${stableHash([parent.id, contributor.name])}`
+    const scope = parent.source.scope
+    const fields = relatedFields(parent, 'author', sourceId, contributor.name, Boolean(contributor.sourceId), scope)
     const details = book.authors?.find((author) => author.id === contributor.sourceId)
     const author = authorSchema.parse({
       ...fields,
@@ -59,7 +68,9 @@ export function createRelatedAuthors(book: BookMetadata, parent: MetadataEntity)
       description: sanitizeDescription(details?.description),
       image: details?.image,
       source: { ...fields.source, quality: details ? 'detail' : 'summary' },
-      identifiers: [{ scheme: 'provider', namespace: parent.source.provider, value: contributor.sourceId }],
+      identifiers: contributor.sourceId
+        ? [{ scheme: 'provider', namespace: parent.source.provider, value: contributor.sourceId }]
+        : [],
       alternativeNames: []
     })
 
@@ -72,7 +83,7 @@ export function createRelatedAuthors(book: BookMetadata, parent: MetadataEntity)
 export function createRelatedSeries(book: BookMetadata, parent: MetadataEntity): Series[] {
   const entities: Series[] = []
   for (const membership of book.series || []) {
-    const sourceId = membership.sourceId || `name:${membership.series}`
+    const sourceId = membership.sourceId || `name:${stableHash([parent.id, membership.series])}`
     const fields = relatedFields(parent, 'series', sourceId, membership.series, Boolean(membership.sourceId))
     const series = seriesSchema.parse(fields)
 

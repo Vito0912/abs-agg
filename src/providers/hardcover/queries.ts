@@ -9,7 +9,6 @@ query SearchBooks($query: String!, $perPage: Int!, $page: Int!) {
     page: $page
   ) {
     ids
-    results
   }
 }
 `
@@ -61,7 +60,6 @@ query GetBookDetails($ids: [Int!]!) {
       isbn_13
       release_date
       release_year
-      description
       asin
       audio_seconds
       publisher {
@@ -74,33 +72,10 @@ query GetBookDetails($ids: [Int!]!) {
         url
       }
     }
-    default_physical_edition {
-      id
-      title
-      isbn_10
-      isbn_13
-      pages
-      image { url }
-      description
-      publisher {
-        name
-      }
-      language {
-        language
-      }
-      release_date
-    }
-    default_cover_edition {
-      id
-      image {
-        url
-      }
-    }
     editions(limit: 10) {
       id
       reading_format_id
       title
-      description
       release_date
       release_year
       pages

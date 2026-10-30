@@ -21,6 +21,8 @@ export const bookMetadataSchema = z.object({
   asin: z.string().optional(),
   marketplace: z.string().optional(),
   bookId: z.string().optional(),
+  sourceUrl: z.url().optional(),
+  sourceIdStable: z.boolean().optional(),
   genres: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
   series: z.array(seriesMetadataSchema).optional(),

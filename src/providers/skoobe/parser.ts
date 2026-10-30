@@ -2,6 +2,7 @@ import { load } from 'cheerio'
 import type { CheerioAPI } from 'cheerio'
 import type { BookMetadata, Contributor, Rating } from '../../types'
 import { normalizeBookMetadata } from '../../utils/helpers'
+import { urlPathId } from '../../metadata/identity'
 import { skoobeBookSchema, skoobeGraphSchema } from './schemas'
 import type { SkoobeBook } from './types'
 
@@ -67,11 +68,15 @@ function durationSeconds(duration: string | undefined): number | undefined {
 function bookContributors($: CheerioAPI, book: SkoobeBook): Contributor[] {
   const authors: Contributor[] = $('.author-container > .tags:not(.category) a')
     .toArray()
-    .map((element) => ({
-      name: $(element).text().trim(),
-      sourceId: $(element).attr('href'),
-      role: 'author'
-    }))
+    .map((element) => {
+      const href = $(element).attr('href')
+
+      return {
+        name: $(element).text().trim(),
+        sourceId: href ? urlPathId(new URL(href, origin).href) : undefined,
+        role: 'author'
+      }
+    })
 
   if (!authors.length) {
     for (const person of book.author || []) authors.push({ name: person.name, role: 'author' })

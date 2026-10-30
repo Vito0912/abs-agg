@@ -45,7 +45,7 @@ export default class AudiotekaProvider extends BaseProvider {
 
     for (const match of limitedMatches) {
       try {
-        const metadata = await this.cachedBook(match.url, params, async () => {
+        const metadata = await this.cachedBook(match.id, params, async () => {
           const fullMetadata = await this.fetchBookDetails(match, lang)
           return this.mapToBookMetadata(fullMetadata)
         })
@@ -90,7 +90,8 @@ export default class AudiotekaProvider extends BaseProvider {
   private mapToBookMetadata(data: AudiotekaFullMetadata): BookMetadata {
     return normalizeBookMetadata({
       title: data.title,
-      bookId: data.url,
+      bookId: data.id,
+      sourceUrl: data.url,
       format: 'audiobook',
       contributors: data.authors.map((name) => ({ name, role: 'author' })),
       author: data.authors.join(', '),

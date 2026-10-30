@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { storedCatalog } from '../../cache/catalog'
 import { normalizeBooks } from '../../metadata/normalize'
+import { stableHash, urlPathId } from '../../metadata/identity'
 import { bundleBooks } from '../../metadata/projection'
 import { mergeMetadataBundles, selectMetadataBundle } from '../../metadata/bundle'
 import type { BookMetadata, MetadataBundle, MetadataQuery, ParsedParameters, ProviderConfig } from '../../types'
@@ -17,8 +18,6 @@ const SOURCES: { key: DreifragSource; url: string; dataField: string }[] = [
 ]
 
 export default class DreifragezeichenProvider extends BaseProvider {
-  override readonly adapterVersion = 2
-
   constructor(config: ProviderConfig) {
     super(config)
   }
@@ -163,7 +162,11 @@ export default class DreifragezeichenProvider extends BaseProvider {
   }
 
   private episodeId(episode: DreifragEpisode | DreifragSpezialEpisode, source: DreifragSource): string {
-    const localId = 'nummer' in episode ? String(episode.nummer) : episode.links?.json || episode.titel
+    let localId: string
+    if ('nummer' in episode) localId = String(episode.nummer)
+    else if (episode.links?.json) localId = urlPathId(episode.links.json)
+    else localId = `unresolved:${stableHash(episode)}`
+
     return `${source}:${localId}`
   }
 
@@ -196,6 +199,7 @@ export default class DreifragezeichenProvider extends BaseProvider {
     return normalizeBookMetadata({
       title: fullTitle,
       bookId: this.episodeId(ep, source),
+      sourceIdStable: nummer !== undefined || Boolean(ep.links?.json),
       format: 'audiobook',
       chapters: ep.kapitel?.map((chapter, index) => ({
         title: chapter.titel,

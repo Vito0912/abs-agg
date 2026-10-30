@@ -1,19 +1,47 @@
 import type { Identifier, MetadataBundle, MetadataEntity } from '../types'
 import { dbManager } from '../database/manager'
-import { normalizeText } from './identity'
+import { normalizeIsbn, normalizeText } from './identity'
+
+interface IdentifierLookup {
+  findIdentifier(identifier: Identifier, providers: string[]): Promise<MetadataEntity[]>
+}
 
 type BookEntity = Extract<MetadataEntity, { kind: 'work' | 'book' }>
 
+function enrichmentIdentifier(identifier: Identifier): Identifier | undefined {
+  if (identifier.scheme === 'isbn') {
+    const value = normalizeIsbn(identifier.value)
+    return value ? { ...identifier, value } : undefined
+  }
+  if (identifier.scheme !== 'asin') return undefined
+  const value = identifier.value.trim().toUpperCase()
+  if (!/^[A-Z0-9]{10}$/.test(value) || !identifier.marketplace?.trim()) return undefined
+
+  return { ...identifier, value }
+}
+
+function hasInvalidIdentifiers(entity: BookEntity): boolean {
+  return entity.identifiers.some((identifier) => {
+    if (identifier.scheme === 'isbn') return !normalizeIsbn(identifier.value)
+    if (identifier.scheme === 'asin') return !/^[A-Z0-9]{10}$/.test(identifier.value.trim().toUpperCase())
+    return false
+  })
+}
+
+function hasDescription(entity: BookEntity): boolean {
+  return Boolean(entity.description?.trim())
+}
+
 function identifierKey(identifier: Identifier): string {
-  return JSON.stringify([identifier.scheme, identifier.value, identifier.namespace || '', identifier.marketplace || ''])
+  const canonical = enrichmentIdentifier(identifier) ?? identifier
+  return JSON.stringify([canonical.scheme, canonical.value, canonical.namespace || '', canonical.marketplace || ''])
 }
 
 function sharedIdentifier(target: BookEntity, donor: BookEntity): Identifier | undefined {
   const donorKeys = new Set(donor.identifiers.map(identifierKey))
 
   return target.identifiers.find((identifier) => {
-    if (identifier.scheme !== 'isbn' && identifier.scheme !== 'asin') return false
-    if (identifier.scheme === 'asin' && !identifier.marketplace) return false
+    if (!enrichmentIdentifier(identifier)) return false
     return donorKeys.has(identifierKey(identifier))
   })
 }
@@ -30,16 +58,15 @@ function hasIdentifierConflict(target: BookEntity, donor: BookEntity): boolean {
 }
 
 function peopleKey(entity: BookEntity, role: 'author' | 'narrator'): string {
-  return entity.contributors
-    .filter((person) => person.role === role)
-    .map((person) => normalizeText(person.name))
-    .sort()
-    .join('|')
+  const names = entity.contributors.filter((person) => person.role === role).map((person) => normalizeText(person.name))
+
+  return [...new Set(names)].sort().join('|')
 }
 
 function canEnrich(target: BookEntity, donor: BookEntity): boolean {
   if (target.kind !== donor.kind || target.source.provider === donor.source.provider) return false
   if (!target.source.stable || !donor.source.stable) return false
+  if (hasInvalidIdentifiers(target) || hasInvalidIdentifiers(donor)) return false
   if (normalizeText(target.name) !== normalizeText(donor.name)) return false
   if (!target.language || target.language !== donor.language) return false
 
@@ -66,25 +93,26 @@ function canEnrich(target: BookEntity, donor: BookEntity): boolean {
 }
 
 function descriptionDonor(target: BookEntity, donors: BookEntity[]): BookEntity | undefined {
-  const candidates = donors.filter((donor) => donor.description && !donor.provenance.description)
+  const candidates = donors.filter((donor) => hasDescription(donor) && !donor.provenance.description)
   const descriptions = new Set(candidates.map((donor) => donor.description))
-  if (descriptions.size !== 1 || target.description) return undefined
+  if (descriptions.size !== 1 || hasDescription(target)) return undefined
 
   return candidates.sort((left, right) => {
     return right.source.fetchedAt - left.source.fetchedAt || left.id.localeCompare(right.id)
   })[0]
 }
 
-async function enrichEntity(target: BookEntity, providers: string[]): Promise<void> {
-  if (target.description) return
+async function enrichEntity(target: BookEntity, providers: string[], database: IdentifierLookup): Promise<void> {
+  if (hasDescription(target) || hasInvalidIdentifiers(target)) return
 
-  const identifiers = target.identifiers.filter((identifier) => {
-    return identifier.scheme === 'isbn' || (identifier.scheme === 'asin' && Boolean(identifier.marketplace))
+  const identifiers = target.identifiers.flatMap((identifier) => {
+    const eligible = enrichmentIdentifier(identifier)
+    return eligible ? [eligible] : []
   })
   const candidates = new Map<string, BookEntity>()
 
   for (const identifier of identifiers.slice(0, 4)) {
-    const records = await dbManager.findIdentifier(identifier, providers)
+    const records = await database.findIdentifier(identifier, providers)
     if (records.length >= 100) return
 
     for (const record of records) {
@@ -106,13 +134,17 @@ async function enrichEntity(target: BookEntity, providers: string[]): Promise<vo
   }
 }
 
-export async function enrichMetadata(bundle: MetadataBundle, providers: string[]): Promise<MetadataBundle> {
+export async function enrichMetadata(
+  bundle: MetadataBundle,
+  providers: string[],
+  database: IdentifierLookup = dbManager
+): Promise<MetadataBundle> {
   const result = structuredClone(bundle)
   const matches = new Set(result.matches)
 
   for (const entity of result.entities) {
     if (!matches.has(entity.id) || !('contributors' in entity)) continue
-    await enrichEntity(entity, providers)
+    await enrichEntity(entity, providers, database)
   }
 
   return result

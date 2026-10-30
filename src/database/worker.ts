@@ -1,5 +1,4 @@
 import { errorAttributes, logger } from '../telemetry/logger'
-import Database from 'better-sqlite3'
 import { Kysely, SqliteDialect, sql } from 'kysely'
 import { parentPort, workerData } from 'node:worker_threads'
 import { mkdirSync } from 'node:fs'
@@ -8,23 +7,26 @@ import { z } from 'zod'
 import { databaseRequestSchema } from './protocol'
 import type { DatabaseCommand } from './protocol'
 import type { DatabaseTables, MetadataDatabase } from './tables'
-import { initializeSchema } from './schema'
+import { migrateDatabase, openSqlite } from './migration-runner'
 import { CacheRepository } from './cache'
 import { CatalogRepository } from './catalog'
 import { DatabaseMaintenance } from './maintenance'
 import { EntityRepository } from './entities'
 
-function openDatabase(dbPath: string): MetadataDatabase {
+async function openDatabase(dbPath: string): Promise<MetadataDatabase> {
   mkdirSync(path.dirname(dbPath), { recursive: true })
-  const sqlite = new Database(dbPath, { timeout: 2000 })
-  sqlite.pragma('journal_mode = WAL')
-  sqlite.pragma('foreign_keys = ON')
-  sqlite.pragma('synchronous = NORMAL')
-
-  const version = sqlite.pragma('user_version', { simple: true })
-  if (version !== 0 && version !== 1) throw new Error('Unsupported metadata database version')
-
-  return new Kysely<DatabaseTables>({ dialect: new SqliteDialect({ database: sqlite }) })
+  const sqlite = openSqlite(dbPath)
+  try {
+    const result = await migrateDatabase(sqlite, dbPath)
+    sqlite.pragma('optimize = 0x10002')
+    if (result.applied.length > 0) {
+      logger.info('Database migrations completed', { count: result.applied.length, rebuilt: result.rebuilt })
+    }
+    return new Kysely<DatabaseTables>({ dialect: new SqliteDialect({ database: sqlite }) })
+  } catch (error) {
+    sqlite.close()
+    throw error
+  }
 }
 
 class DatabaseOperations {
@@ -81,19 +83,19 @@ class DatabaseOperations {
 
   private async stats() {
     const entries = await this.database
-      .selectFrom('cache_entries')
+      .selectFrom('search_cache')
       .select((expression) => expression.fn.countAll<number>().as('count'))
       .executeTakeFirstOrThrow()
     const entities = await this.database
-      .selectFrom('entities')
+      .selectFrom('catalog_entities')
       .select((expression) => expression.fn.countAll<number>().as('count'))
       .executeTakeFirstOrThrow()
     const snapshots = await this.database
-      .selectFrom('snapshots')
+      .selectFrom('entity_versions')
       .select((expression) => expression.fn.countAll<number>().as('count'))
       .executeTakeFirstOrThrow()
     const catalogs = await this.database
-      .selectFrom('catalog_cache')
+      .selectFrom('collection_cache')
       .select((expression) => expression.fn.countAll<number>().as('count'))
       .executeTakeFirstOrThrow()
 
@@ -106,10 +108,10 @@ async function startWorker(): Promise<void> {
   if (!port) throw new Error('Database worker requires a parent port')
 
   const settings = z.object({ dbPath: z.string() }).parse(workerData)
-  const database = openDatabase(settings.dbPath)
-  await initializeSchema(database)
-  await sql`PRAGMA user_version = 1`.execute(database)
+  const database = await openDatabase(settings.dbPath)
   const operations = new DatabaseOperations(database)
+
+  port.postMessage({ type: 'database-ready' })
 
   port.on('message', (input: unknown) => {
     void handleMessage(input).catch((error: unknown) => {

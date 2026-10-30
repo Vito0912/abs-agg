@@ -1,4 +1,5 @@
 import { dbManager } from '../../database/manager'
+import { availableCatalogProviders } from '../../metadata/catalog-providers'
 import { catalogBundle } from '../../metadata/bundle'
 import { normalizeIsbn } from '../../metadata/identity'
 import { rankCandidates } from '../../metadata/search'
@@ -12,7 +13,7 @@ export default class LocalProvider extends BaseProvider {
   }
 
   override async searchMetadata(query: MetadataQuery, params: ParsedParameters): Promise<MetadataBundle> {
-    const providers = await dbManager.catalogProviders()
+    const providers = await availableCatalogProviders()
     const kinds: EntityKind[] = query.kind ? [query.kind] : ['work', 'book']
     const limit = Math.min(Number(params.limit) || query.limit || 10, 50)
     const candidates = await dbManager.searchCandidates({ title: query.title, kinds, providers, limit: 200 })
@@ -33,7 +34,7 @@ export default class LocalProvider extends BaseProvider {
   }
 
   override async lookupMetadata(entityId: string, _params: ParsedParameters): Promise<MetadataBundle> {
-    const providers = await dbManager.catalogProviders()
+    const providers = await availableCatalogProviders()
     const entities = await dbManager.loadEntities([entityId], providers)
     return catalogBundle([entityId], entities)
   }

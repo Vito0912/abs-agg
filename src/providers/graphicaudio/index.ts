@@ -1,5 +1,6 @@
 import { storedCatalog } from '../../cache/catalog'
 import { normalizeBooks } from '../../metadata/normalize'
+import { normalizeIsbn, urlPathId } from '../../metadata/identity'
 import { bundleBooks } from '../../metadata/projection'
 import { selectMetadataBundle } from '../../metadata/bundle'
 import type { BookMetadata, MetadataBundle, MetadataQuery, ParsedParameters, ProviderConfig } from '../../types'
@@ -15,8 +16,6 @@ const CATALOG_URLS = [
 ]
 
 export default class GraphicAudioProvider extends BaseProvider {
-  override readonly adapterVersion = 2
-
   constructor(config: ProviderConfig) {
     super(config)
   }
@@ -112,14 +111,15 @@ export default class GraphicAudioProvider extends BaseProvider {
 
     return normalizeBookMetadata({
       title: book.title,
-      bookId: book.link || book.isbn || book.asin,
+      bookId: book.link ? urlPathId(book.link) : undefined,
+      sourceUrl: book.link,
       format: 'audiobook',
       subtitle: book.subtitle,
       author: book.author,
       narrator: narrators?.join(', '),
       description: book.description,
       cover: book.cover,
-      isbn: book.isbn,
+      isbn: book.isbn ? normalizeIsbn(book.isbn) : undefined,
       asin: book.asin,
       genres: book.genre ? [book.genre] : undefined,
       series,

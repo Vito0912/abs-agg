@@ -27,6 +27,18 @@ export function entityId(provider: string, kind: string, sourceId: string, scope
   return `${provider}:${kind}:${stableHash([sourceId, scope])}`
 }
 
+export function urlPathId(value: string): string {
+  const url = new URL(value)
+  if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
+    throw new Error('Source URL cannot be represented by a path identifier')
+  }
+
+  const path = url.pathname
+  if (path === '/') throw new Error('Source URL has no identifying path')
+
+  return `path:${url.host}${path}`
+}
+
 export function normalizeIsbn(input: string): string | undefined {
   const value = input.replace(/[\s-]/g, '').toUpperCase()
 

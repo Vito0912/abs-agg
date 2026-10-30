@@ -82,7 +82,8 @@ export default class ArdAudiothekProvider extends BaseProvider {
 
     return normalizeBookMetadata({
       title: cleanTitle,
-      bookId: item.id ? String(item.id) : undefined,
+      bookId: item.id ? `programset:${item.id}` : undefined,
+      sourceUrl: item.sharingUrl,
       format: 'audiobook',
       author: authorName,
       description: item.synopsis,
@@ -112,11 +113,13 @@ export default class ArdAudiothekProvider extends BaseProvider {
       }
     }
 
-    const series = item.programSet?.title ? [{ series: item.programSet.title, sequence: undefined }] : undefined
+    const series = item.programSet?.title
+      ? [{ series: item.programSet.title, sourceId: item.programSet.id, sequence: undefined }]
+      : undefined
 
     return normalizeBookMetadata({
       title: cleanTitle,
-      bookId: item.id ? String(item.id) : undefined,
+      bookId: item.id ? `item:${item.id}` : undefined,
       format: 'audiobook',
       author: authorName,
       description: item.synopsis,
@@ -184,6 +187,7 @@ export default class ArdAudiothekProvider extends BaseProvider {
       ? [
           {
             series: cleanTitle,
+            sourceId: item.id,
             sequence: undefined
           }
         ]
@@ -191,7 +195,8 @@ export default class ArdAudiothekProvider extends BaseProvider {
 
     return normalizeBookMetadata({
       title: cleanTitle,
-      bookId: item.id ? String(item.id) : undefined,
+      bookId: item.id ? `programset:${item.id}` : undefined,
+      sourceUrl: item.sharingUrl,
       format: 'audiobook',
       author: authorName,
       description: description,

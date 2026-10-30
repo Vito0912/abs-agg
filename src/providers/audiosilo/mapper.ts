@@ -7,17 +7,19 @@ import {
   seriesSchema,
   chapterSchema
 } from '../../types/metadata'
-import { entityId, bookIdentifiers } from '../../metadata/identity'
+import { entityId, bookIdentifiers, sourceScope } from '../../metadata/identity'
 import { publicationDate } from '../../metadata/dates'
 import { sanitizeDescription } from '../../metadata/book'
 import { audioSiloUrl } from './client'
 import type { AudioSiloWork, AudioSiloRecording, RecordingChapters } from './types'
 
+const defaultScope = sourceScope({})
+
 function fields(kind: EntityKind, sourceId: string, name: string) {
   const source: MetadataSource = {
     provider: 'audiosilo',
     sourceId,
-    scope: '',
+    scope: defaultScope,
     stable: true,
     fetchedAt: Date.now(),
     quality: 'detail'
@@ -28,7 +30,7 @@ function fields(kind: EntityKind, sourceId: string, name: string) {
   return {
     schemaVersion: 1,
     kind,
-    id: entityId('audiosilo', kind, sourceId, ''),
+    id: entityId('audiosilo', kind, sourceId, defaultScope),
     name,
     identifiers,
     source,
@@ -65,7 +67,7 @@ function createWork(work: AudioSiloWork) {
       name: person.name,
       role: 'author',
       sourceId: person.id,
-      authorId: entityId('audiosilo', 'author', person.id, '')
+      authorId: entityId('audiosilo', 'author', person.id, defaultScope)
     })),
     genres: work.genres || [],
     tags: [],
@@ -106,13 +108,13 @@ function createBook(work: AudioSiloWork, recording: AudioSiloRecording, workId: 
         name: person.name,
         role: 'author',
         sourceId: person.id,
-        authorId: entityId('audiosilo', 'author', person.id, '')
+        authorId: entityId('audiosilo', 'author', person.id, defaultScope)
       })),
       ...recording.narrators.map((person) => ({
         name: person.name,
         role: 'narrator',
         sourceId: person.id,
-        authorId: entityId('audiosilo', 'author', person.id, '')
+        authorId: entityId('audiosilo', 'author', person.id, defaultScope)
       }))
     ],
     relations: [{ type: 'editionOf', targetId: workId }],

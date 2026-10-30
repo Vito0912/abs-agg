@@ -26,6 +26,7 @@ export const bigFinishSearchResponseSchema = z.object({
 
 export const parsedBookDataSchema = z.object({
   schemaVersion: z.literal(3),
+  id: z.string().min(1),
   url: z.string(),
   title: z.union([z.string(), z.null()]),
   series: z.union([z.string(), z.null()]),

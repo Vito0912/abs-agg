@@ -305,11 +305,6 @@ export const hardcoverSearchResponseSchema = z.object({
         .array(z.union([z.number(), z.string()]))
         .nullish()
         .transform((value) => value ?? undefined)
-        .optional(),
-      results: z
-        .string()
-        .nullish()
-        .transform((value) => value ?? undefined)
         .optional()
     })
     .nullish()

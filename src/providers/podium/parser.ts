@@ -63,7 +63,8 @@ function contributors($: CheerioAPI, book: PodiumBook): Contributor[] {
     for (const element of $(`[data-testid="${selector}"]`).toArray()) {
       const name = $(element).text().replace(/^,\s*/, '').trim()
       const href = $(element).attr('href')
-      const sourceId = href ? /^\/(?:authors|performers)\/(\d+)\//.exec(href)?.[1] : undefined
+      const sourceMatch = href ? /^\/(authors|performers)\/(\d+)\//.exec(href) : null
+      const sourceId = sourceMatch ? `${sourceMatch[1]}:${sourceMatch[2]}` : undefined
       if (name) people.push({ name, role, sourceId })
     }
   }

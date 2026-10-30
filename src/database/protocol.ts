@@ -66,6 +66,7 @@ export const databaseCommandSchema = z.discriminatedUnion('operation', [
 ])
 
 export const databaseRequestSchema = z.object({ id: z.number().int(), command: databaseCommandSchema })
+export const databaseReadySchema = z.object({ type: z.literal('database-ready') })
 export const databaseReplySchema = z.discriminatedUnion('ok', [
   z.object({ id: z.number().int(), ok: z.literal(true), value: z.unknown() }),
   z.object({
