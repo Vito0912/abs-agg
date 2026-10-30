@@ -596,7 +596,7 @@ For deployments with authentication enabled, use the configured `AUTH_TOKEN` ins
 | Name | Type | Validation | Default | Description |
 |------|------|------------|---------|-------------|
 | `language` | string | - | - | Filter by language code (e.g., 'en', 'de') |
-| `limit` | int | 1-25 | 10 | Maximum number of results to return |
+| `limit` | int | 1-25 | 3 | Maximum number of results to return |
 
 ### Returned Fields
 

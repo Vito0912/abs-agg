@@ -130,17 +130,31 @@ export function bundleBooks(bundle: MetadataBundle): BookMetadata[] {
   return books
 }
 
+function searchResponseMetadata(bundle: MetadataBundle, matchId: string): MetadataBundle {
+  const selected = selectMetadataBundle(bundle, [matchId])
+  const entities = selected.entities.filter((entity) => entity.kind !== 'work')
+  const ids = new Set(entities.map((entity) => entity.id))
+
+  return {
+    ...selected,
+    entities: entities.map((entity) => ({
+      ...entity,
+      relations: entity.relations.filter((relation) => ids.has(relation.targetId))
+    }))
+  }
+}
+
 export function absMatches(bundle: MetadataBundle): AbsBook[] {
   const entities = new Map(bundle.entities.map((entity) => [entity.id, entity]))
   const matches: AbsBook[] = []
 
   for (const id of bundle.matches) {
     const entity = entities.get(id)
-    if (!entity || !('contributors' in entity)) continue
+    if (entity?.kind !== 'book') continue
 
     const book = projectBook(entity, entities)
     const duration = book.duration === undefined ? undefined : Math.round(book.duration)
-    const metadata = selectMetadataBundle(bundle, [id])
+    const metadata = searchResponseMetadata(bundle, id)
     matches.push(absBookSchema.parse({ ...book, duration, metadata }))
   }
 

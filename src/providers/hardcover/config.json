@@ -28,7 +28,7 @@
         "max": 25
       },
       "description": "Maximum number of results to return",
-      "default": 10
+      "default": 3
     }
   ],
   "returnedFields": [

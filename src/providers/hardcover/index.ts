@@ -16,7 +16,7 @@ export default class HardcoverProvider extends BaseProvider {
   }
 
   protected async searchBooks(title: string, author: string | null, params: ParsedParameters): Promise<BookMetadata[]> {
-    const limit = Math.min(Number(params.limit) || 10, 25)
+    const limit = Math.min(Number(params.limit) || 3, 25)
     const books = await this.client.searchBooks(title, author, limit)
     const language = normalizeLanguage(typeof params.language === 'string' ? params.language : undefined)
 
