@@ -40,6 +40,11 @@ export const observeHttpRequest: RequestHandler = (req, res, next) => {
       'user_agent.original': req.get('User-Agent') || ''
     }
   }
+  const referer = req.get('Referer')
+  if (referer) logContext.attributes['http.request.header.referer'] = referer
+  const origin = req.get('Origin')
+  if (origin) logContext.attributes['http.request.header.origin'] = origin
+
   const requestContext = trace.setSpan(parentContext, span)
   const startedAt = performance.now()
   let completed = false

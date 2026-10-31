@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Last updated: 29 October 2026
+Last updated: 31 October 2026
 
 ## 1. Scope and contact
 
@@ -36,7 +36,7 @@ Records may include the original provider's name, source identifier, and a link 
 
 ### What is excluded
 
-We do not include your search query, query-derived cache keys, IP address, authentication information, client identifiers, or request-level identifiers and timestamps in shared metadata. We do not share a mapping connecting you or your IP address to a query or its results.
+We do not include your search query, query-derived cache keys, IP address, authentication information, client identifiers, request headers, or request-level identifiers and timestamps in shared metadata. We do not share a mapping connecting you or your IP address to a query or its results.
 
 This sharing concerns catalog metadata.
 
@@ -51,6 +51,10 @@ We use Cloudflare to protect and deliver the hosted service. Cloudflare processe
 Infrastructure and security logs, including any IP addresses or clear-text search terms they contain, are kept separate from the metadata database and deleted within 7 days. They are used for operation and abuse prevention, rather than to create personal search profiles, and are not included in shared metadata. Further information is available in [Cloudflare's privacy policy](https://www.cloudflare.com/privacypolicy/).
 
 Operational monitoring processes technical information such as response times, status codes, provider availability, cache outcomes, and errors. These operational records are retained for no more than 7 days and are not part of the shared metadata database.
+
+When request logging is enabled, application logs may also contain search terms, author names, provider parameters, result counts, and trace identifiers. They include the User-Agent header and, when supplied by your client, the Origin and Referer headers.
+
+The requested URL path is included only in warning and error application logs, without its query string. We use these details to understand how the service is accessed, diagnose problems, and investigate abuse.
 
 ## 6. Purposes and legal bases
 
@@ -75,7 +79,7 @@ We retain data according to its purpose:
 
 - **Hashed search-cache keys and cached results:** retained according to cache expiry and pruning policies. Queries are hashed from the outset
 - **Catalog metadata:** for the continuing operation and development of the metadata database. Personal data is corrected or deleted when required by law or no longer needed for a lawful purpose.
-- **Infrastructure, security, and operational logs, including any clear-text search queries and IP addresses:** no more than 7 days.
+- **Infrastructure, security, and operational logs, including any clear-text search queries, IP addresses, User-Agent, Origin, Referer, and request paths:** no more than 7 days.
 - **Support and privacy correspondence:** while needed to handle the enquiry and meet applicable legal obligations.
 
 Metadata is not subject to a general fixed deletion period. This does not override the GDPR's requirements to limit the retention of personal data. Independent recipients may retain copies of publicly shared metadata under their own responsibility.
