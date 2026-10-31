@@ -8,6 +8,18 @@ import { normalizeIsbn, normalizeText } from '../metadata/identity'
 export class CatalogRepository {
   constructor(private readonly database: MetadataDatabase) {}
 
+  async entityCounts() {
+    return this.database
+      .selectFrom('source_entities as entity')
+      .innerJoin('catalog_entities as catalog', 'catalog.entity_key', 'entity.entity_key')
+      .select(['entity.provider', 'entity.kind'])
+      .select((expression) => expression.fn.countAll<number>().as('count'))
+      .groupBy(['entity.provider', 'entity.kind'])
+      .orderBy('entity.provider')
+      .orderBy('entity.kind')
+      .execute()
+  }
+
   async providers(): Promise<string[]> {
     const rows = await this.database
       .selectFrom('source_entities')

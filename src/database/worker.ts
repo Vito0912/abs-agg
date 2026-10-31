@@ -74,6 +74,8 @@ class DatabaseOperations {
         return this.stats()
       case 'catalogProviders':
         return this.catalog.providers()
+      case 'catalogEntityCounts':
+        return this.catalog.entityCounts()
       case 'close':
         await sql`PRAGMA wal_checkpoint(TRUNCATE)`.execute(this.database)
         await this.database.destroy()

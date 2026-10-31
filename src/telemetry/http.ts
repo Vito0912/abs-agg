@@ -35,7 +35,10 @@ export const observeHttpRequest: RequestHandler = (req, res, next) => {
   const spanContext = span.spanContext()
   const logContext: RequestLogContext = {
     traceId: isSpanContextValid(spanContext) ? spanContext.traceId : randomBytes(16).toString('hex'),
-    attributes: {}
+    path: req.path,
+    attributes: {
+      'user_agent.original': req.get('User-Agent') || ''
+    }
   }
   const requestContext = trace.setSpan(parentContext, span)
   const startedAt = performance.now()

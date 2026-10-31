@@ -57,6 +57,7 @@ export const databaseCommandSchema = z.discriminatedUnion('operation', [
   z.object({ operation: z.literal('findIdentifier'), identifier: identifierSchema, providers: z.array(z.string()) }),
   z.object({ operation: z.literal('stats') }),
   z.object({ operation: z.literal('catalogProviders') }),
+  z.object({ operation: z.literal('catalogEntityCounts') }),
   z.object({
     operation: z.literal('prune'),
     now: z.number().int()
@@ -99,6 +100,10 @@ export const databaseStatsSchema = z.object({
   snapshots: z.number(),
   catalogs: z.number()
 })
+
+export const catalogEntityCountsSchema = z.array(
+  z.object({ provider: z.string(), kind: entityKindSchema, count: z.number().int().nonnegative() })
+)
 
 export type DatabaseCommand = z.infer<typeof databaseCommandSchema>
 export type StoreBundleCommand = z.infer<typeof storeBundleSchema>

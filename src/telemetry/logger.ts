@@ -25,7 +25,7 @@ function write(level: keyof typeof severity, message: string, attributes: Attrib
   const hasSpanContext = spanContext !== undefined && isSpanContextValid(spanContext)
   const traceId = hasSpanContext ? spanContext.traceId : requestTraceId()
   const correlation = traceId ? { trace_id: traceId } : {}
-  const logAttributes = { ...requestLogAttributes(), ...attributes }
+  const logAttributes = { ...requestLogAttributes(level !== 'info'), ...attributes }
 
   console[level](
     JSON.stringify({

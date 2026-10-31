@@ -8,6 +8,7 @@ import { cacheSettings } from '../config'
 import {
   cachedBundleSchema,
   cachedCatalogSchema,
+  catalogEntityCountsSchema,
   databaseStatsSchema,
   databaseReplySchema,
   databaseReadySchema
@@ -116,6 +117,10 @@ export class DatabaseManager {
 
   async stats() {
     return databaseStatsSchema.parse(await this.execute({ operation: 'stats' }))
+  }
+
+  async catalogEntityCounts() {
+    return catalogEntityCountsSchema.parse(await this.execute({ operation: 'catalogEntityCounts' }))
   }
 
   async readBundle(key: string): Promise<z.infer<typeof cachedBundleSchema> | null> {

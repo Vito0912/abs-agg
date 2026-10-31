@@ -3,6 +3,7 @@ import type { Attributes } from '@opentelemetry/api'
 
 export interface RequestLogContext {
   traceId: string
+  path?: string
   attributes: Attributes
 }
 
@@ -17,13 +18,16 @@ export function setRequestLogAttributes(attributes: Attributes): void {
   if (context && process.env.LOG_REQUESTS === 'true') Object.assign(context.attributes, attributes)
 }
 
-export function requestLogAttributes(): Attributes {
+export function requestLogAttributes(includePath: boolean): Attributes {
   const context = storage.getStore()
   if (!context) return {}
 
   if (process.env.LOG_REQUESTS !== 'true') return {}
 
-  return { ...context.attributes }
+  const attributes = { ...context.attributes }
+  if (includePath && context.path) attributes['url.path'] = context.path
+
+  return attributes
 }
 
 export function requestTraceId(): string | undefined {

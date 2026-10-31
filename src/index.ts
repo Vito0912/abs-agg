@@ -11,12 +11,14 @@ import { handleRequestError } from './middleware/errors'
 import { metadataCache } from './cache/service'
 import { dbManager } from './database/manager'
 import { closeCatalogCache } from './cache/catalog'
+import { startCatalogMetrics } from './telemetry/catalog'
 
 const app = express()
 app.disable('x-powered-by')
 const port = Number(process.env.PORT || 3000)
 let server: Server | undefined
 let shuttingDown = false
+let stopCatalogMetrics: (() => void) | undefined
 
 app.use(observeHttpRequest)
 app.use(createAuthMiddleware())
@@ -35,6 +37,7 @@ async function startServer(): Promise<void> {
   await dbManager.generation()
   await dbManager.prune()
   await providerRegistry.loadProviders(path.join(__dirname, 'providers'))
+  stopCatalogMetrics = startCatalogMetrics(providerRegistry.getAllConfigs().map((provider) => provider.id))
 
   server = await new Promise<Server>((resolve, reject) => {
     const listener = app.listen(port, process.env.HOST || '0.0.0.0', (error?: Error) => {
@@ -75,6 +78,8 @@ async function shutdown(): Promise<void> {
 }
 
 async function closeResources(): Promise<void> {
+  stopCatalogMetrics?.()
+
   const resources = [
     { name: 'Catalog cache', close: closeCatalogCache },
     { name: 'Metadata cache', close: () => metadataCache.close() },
