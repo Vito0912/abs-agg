@@ -56,6 +56,8 @@ When request logging is enabled, application logs may also contain search terms,
 
 The requested URL path is included only in warning and error application logs, without its query string. We use these details to understand how the service is accessed, diagnose problems, and investigate abuse.
 
+Search requests using a generic browser User-Agent must include a valid HTTP(S) Origin or Referer header to receive metadata results. This is to prevent abuse by automated scripts and bots. We do not use these headers to identify individual users or build personal profiles.
+
 ## 6. Purposes and legal bases
 
 Where personal data is involved, we rely on Article 6(1)(f) GDPR for the following legitimate interests, balanced against the rights of affected people:

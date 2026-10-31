@@ -12,6 +12,7 @@ import { metadataCache } from './cache/service'
 import { dbManager } from './database/manager'
 import { closeCatalogCache } from './cache/catalog'
 import { startCatalogMetrics } from './telemetry/catalog'
+import { drainSearches } from './routes/search'
 
 const app = express()
 app.disable('x-powered-by')
@@ -81,6 +82,7 @@ async function closeResources(): Promise<void> {
   stopCatalogMetrics?.()
 
   const resources = [
+    { name: 'Search requests', close: drainSearches },
     { name: 'Catalog cache', close: closeCatalogCache },
     { name: 'Metadata cache', close: () => metadataCache.close() },
     { name: 'Telemetry', close: shutdownTelemetry }
