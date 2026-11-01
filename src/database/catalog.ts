@@ -89,6 +89,26 @@ export class CatalogRepository {
     return this.hydrate(rows)
   }
 
+  async findTitle(title: string, kind: 'work' | 'book', providers: string[]): Promise<MetadataEntity[]> {
+    const normalizedTitle = normalizeText(title)
+    if (!normalizedTitle || title.length > 500 || providers.length === 0) return []
+
+    const query = `name : "${normalizedTitle}"`
+    const rows = await this.database
+      .selectFrom('metadata_fts')
+      .innerJoin('source_entities as entity', 'entity.entity_key', 'metadata_fts.rowid')
+      .innerJoin('catalog_entities as catalog', 'catalog.entity_key', 'entity.entity_key')
+      .select(['catalog.version_key', 'catalog.fetched_at'])
+      .where(sql<boolean>`metadata_fts MATCH ${query}`)
+      .where('entity.kind', '=', kind)
+      .where('entity.provider', 'in', providers)
+      .orderBy('entity.entity_key')
+      .limit(100)
+      .execute()
+
+    return this.hydrate(rows)
+  }
+
   async loadEntities(ids: string[], providers: string[]): Promise<MetadataEntity[]> {
     if (ids.length === 0 || providers.length === 0) return []
 

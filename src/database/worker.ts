@@ -66,6 +66,8 @@ class DatabaseOperations {
         return this.catalog.loadEntities(command.ids, command.providers)
       case 'findIdentifier':
         return this.catalog.findIdentifier(command.identifier, command.providers)
+      case 'findTitle':
+        return this.catalog.findTitle(command.title, command.kind, command.providers)
       case 'clear':
         return this.maintenance.clear(command)
       case 'prune':

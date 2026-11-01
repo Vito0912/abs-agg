@@ -1,5 +1,5 @@
 import type { Generated, Kysely } from 'kysely'
-import type { Contributor, EntityKind, Identifier, MetadataSource, Rating } from '../types'
+import type { Contributor, EntityKind, Identifier, MetadataEntity, MetadataSource, Rating } from '../types'
 
 interface StateTable {
   id: number
@@ -143,7 +143,7 @@ interface VersionProvenanceTable {
   provider: string
   donor_key: number
   fetched_at: number
-  evidence: 'isbn' | 'asin' | 'provider-relationship'
+  evidence: MetadataEntity['provenance'][string]['evidence']
 }
 
 interface CatalogEntityTable {

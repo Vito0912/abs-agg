@@ -109,6 +109,11 @@ export class DatabaseManager {
     return z.array(metadataEntitySchema).parse(value)
   }
 
+  async findTitle(title: string, kind: 'work' | 'book', providers: string[]) {
+    const value = await this.execute({ operation: 'findTitle', title, kind, providers })
+    return z.array(metadataEntitySchema).parse(value)
+  }
+
   async catalogProviders(): Promise<string[]> {
     const value = await this.execute({ operation: 'catalogProviders' })
 

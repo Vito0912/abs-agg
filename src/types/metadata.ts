@@ -51,7 +51,7 @@ export const attributionSchema = z.object({
   provider: z.string(),
   entityId: z.string(),
   fetchedAt: z.number().int(),
-  evidence: z.enum(['isbn', 'asin', 'provider-relationship'])
+  evidence: z.enum(['isbn', 'asin', 'title-author-subtitle', 'provider-relationship'])
 })
 const common = {
   schemaVersion: z.literal(1),

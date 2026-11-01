@@ -55,6 +55,12 @@ export const databaseCommandSchema = z.discriminatedUnion('operation', [
     providers: z.array(z.string())
   }),
   z.object({ operation: z.literal('findIdentifier'), identifier: identifierSchema, providers: z.array(z.string()) }),
+  z.object({
+    operation: z.literal('findTitle'),
+    title: z.string().min(1).max(500),
+    kind: z.enum(['work', 'book']),
+    providers: z.array(z.string())
+  }),
   z.object({ operation: z.literal('stats') }),
   z.object({ operation: z.literal('catalogProviders') }),
   z.object({ operation: z.literal('catalogEntityCounts') }),

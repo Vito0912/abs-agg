@@ -121,7 +121,7 @@ Environment variables:
 | `GOODREADS_KEY`                    | No                        | API key for Goodreads provider                                               |
 | `DEEZER_ACCESS_TOKEN`              | No                        | Token for higher rate limits                                                 |
 | `ENABLE_LOCAL_PROVIDER`            | No                        | Enable the local catalog provider (default: false)                           |
-| `ENABLE_CROSS_PROVIDER_ENRICHMENT` | No                        | Fill missing descriptions from compatible stored metadata (default: false)   |
+| `ENABLE_CROSS_PROVIDER_ENRICHMENT` | No                        | Fill missing fields from compatible stored metadata (default: false)         |
 | `METADATA_DATABASE_PATH`           | No                        | SQLite database path (default: ./data/metadata.sqlite)                       |
 | `CACHE_SEARCH_TTL_SECONDS`         | No                        | Search freshness in seconds before jitter (default: 3600)                    |
 | `CACHE_DETAIL_TTL_SECONDS`         | No                        | Detail freshness in seconds before jitter (default: 86400)                   |
@@ -134,6 +134,8 @@ Environment variables:
 | `OTEL_EXPORTER_OTLP_ENDPOINT`      | When telemetry is enabled | External collector base URL, e.g. http://alloy:4318                          |
 | `OTEL_METRIC_EXPORT_INTERVAL`      | No                        | Metric export interval in milliseconds (default: 60000)                      |
 | `LOG_REQUESTS`                     | No                        | Enable JSON request logs with trace/span IDs when available (default: false) |
+
+When `ENABLE_CROSS_PROVIDER_ENRICHMENT=true`, enrichment fills missing fields such as duration, cover, publisher, publication date, contributor roles, and series from stored provider metadata. Providers retain their own records and existing values always take precedence. Matching uses a valid shared ISBN, a marketplace-qualified ASIN, or matching normalized author names, title, and subtitle. The text match works independently of ISBN; two absent subtitles count as equal. Known metadata conflicts or disagreeing donor values prevent filling the affected metadata. Borrowed fields retain their source attribution and never replace stored originals.
 
 ## Contributing
 
