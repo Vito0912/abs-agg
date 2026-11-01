@@ -22,6 +22,8 @@ import * as catalogRefreshes from './019_1_1_0_catalog_refreshes'
 import * as metadataFts from './020_1_1_0_metadata_fts'
 import * as metadataTrigrams from './021_1_1_0_metadata_trigrams'
 import * as ready from './022_1_1_0_ready'
+import * as authorDeduplication from './023_1_1_0_author_deduplication'
+import * as sharedMetadata from './024_1_1_0_shared_metadata'
 
 export const migrations: Record<string, Migration> = {
   '000_1_1_0_rebuild_prerelease': prerelease,
@@ -46,7 +48,9 @@ export const migrations: Record<string, Migration> = {
   '019_1_1_0_catalog_refreshes': catalogRefreshes,
   '020_1_1_0_metadata_fts': metadataFts,
   '021_1_1_0_metadata_trigrams': metadataTrigrams,
-  '022_1_1_0_ready': ready
+  '022_1_1_0_ready': ready,
+  '023_1_1_0_author_deduplication': authorDeduplication,
+  '024_1_1_0_shared_metadata': sharedMetadata
 }
 
-export const latestSchemaVersion = 3
+export const latestSchemaVersion = 5

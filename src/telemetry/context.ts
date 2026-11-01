@@ -18,6 +18,15 @@ export function setRequestLogAttributes(attributes: Attributes): void {
   if (context && process.env.LOG_REQUESTS === 'true') Object.assign(context.attributes, attributes)
 }
 
+export function setSearchCacheLogAttributes(cached: boolean, booksCached = 0): void {
+  const context = storage.getStore()
+  if (!context || process.env.LOG_REQUESTS !== 'true') return
+
+  context.attributes['search.cached'] = cached
+  if (cached) delete context.attributes['search.cached_books']
+  else context.attributes['search.cached_books'] = booksCached
+}
+
 export function requestLogAttributes(includePath: boolean): Attributes {
   const context = storage.getStore()
   if (!context) return {}

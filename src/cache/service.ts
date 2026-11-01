@@ -1,5 +1,6 @@
 import { dbManager } from '../database/manager'
 import { recordCacheEvent } from '../telemetry/operations'
+import { setSearchCacheLogAttributes } from '../telemetry/context'
 import { errorAttributes, logger } from '../telemetry/logger'
 import type { DatabaseManager } from '../database/manager'
 import type { CacheMode, MetadataBundle } from '../types'
@@ -12,12 +13,19 @@ interface CacheRequest {
   key: string
   provider: string
   ttlMs: number
+  type?: 'search' | 'detail'
   mode?: CacheMode
   load: () => Promise<MetadataBundle>
 }
 
+interface CacheResult {
+  bundle: MetadataBundle
+  cached: boolean
+  booksCached: number
+}
+
 export class MetadataCache {
-  private readonly pending = new Map<string, Promise<MetadataBundle>>()
+  private readonly pending = new Map<string, Promise<CacheResult>>()
   private readonly failures = new Map<string, { error: unknown; until: number }>()
   private closed = false
   private readonly cleanup: NodeJS.Timeout
@@ -33,6 +41,15 @@ export class MetadataCache {
   }
 
   async getOrLoad(request: CacheRequest): Promise<MetadataBundle> {
+    const result = await this.load(request)
+    if (request.type === 'search') {
+      setSearchCacheLogAttributes(result.cached, result.booksCached)
+    }
+
+    return result.bundle
+  }
+
+  private async load(request: CacheRequest): Promise<CacheResult> {
     if (this.closed) throw new Error('Metadata cache is closing')
     const mode = request.mode || cacheMode()
     if (mode === 'disabled') {
@@ -45,7 +62,7 @@ export class MetadataCache {
     if (mode !== 'refresh' && cached && now < cached.freshUntil) {
       this.metrics.fresh++
       recordCacheEvent(request.provider, 'fresh')
-      return cached.bundle
+      return { bundle: cached.bundle, cached: true, booksCached: 0 }
     }
 
     if (mode !== 'refresh' && cached && cached.bundle.matches.length > 0) {
@@ -53,7 +70,7 @@ export class MetadataCache {
       recordCacheEvent(request.provider, 'stale')
       markPartialResult()
       void this.refresh(request, mode, cached.bundle).catch(() => undefined)
-      return cached.bundle
+      return { bundle: cached.bundle, cached: true, booksCached: 0 }
     }
 
     this.metrics.miss++
@@ -65,7 +82,7 @@ export class MetadataCache {
         this.metrics.stale++
         recordCacheEvent(request.provider, 'stale')
         markPartialResult()
-        return cached.bundle
+        return { bundle: cached.bundle, cached: true, booksCached: 0 }
       }
       throw error
     }
@@ -97,7 +114,7 @@ export class MetadataCache {
     return bundle
   }
 
-  private refresh(request: CacheRequest, mode: CacheMode, previous?: MetadataBundle): Promise<MetadataBundle> {
+  private refresh(request: CacheRequest, mode: CacheMode, previous?: MetadataBundle): Promise<CacheResult> {
     const pendingKey = `${request.key}:${mode}`
     const pending = this.pending.get(pendingKey)
     if (pending) {
@@ -119,19 +136,21 @@ export class MetadataCache {
     request: CacheRequest,
     cacheResponse = true,
     previous?: MetadataBundle
-  ): Promise<MetadataBundle> {
+  ): Promise<CacheResult> {
     const generation = await this.database.generation()
     const startedAt = Date.now()
 
     try {
       let bundle = await this.loadValidated(request)
-      if (bundle.matches.length === 0 && previous && previous.matches.length > 0) {
+      const reusedPrevious = bundle.matches.length === 0 && previous !== undefined && previous.matches.length > 0
+      if (reusedPrevious && previous) {
         markPartialResult()
         bundle = { ...previous, complete: false }
       }
 
+      let stored = false
       if (cacheResponse) {
-        await this.database.storeBundle({
+        stored = await this.database.storeBundle({
           key: request.key,
           provider: request.provider,
           bundle,
@@ -143,7 +162,8 @@ export class MetadataCache {
         await this.database.ingestMetadata({ bundle, generation, startedAt })
       }
 
-      return bundle
+      const booksCached = stored ? bundle.entities.filter((entity) => entity.kind === 'book').length : 0
+      return { bundle, cached: reusedPrevious, booksCached }
     } catch (error) {
       if (cacheResponse) {
         this.metrics.refreshError++

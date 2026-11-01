@@ -59,6 +59,8 @@ const GENRE_SHELVES = new Set([
 ])
 
 export default class GoodreadsProvider extends BaseProvider {
+  override readonly adapterVersion = 2
+
   private apiKey: string
 
   constructor(config: ProviderConfig) {
@@ -180,7 +182,7 @@ export default class GoodreadsProvider extends BaseProvider {
     const title = this.extractTitle(fullTitle)
     const subtitle = this.extractSubtitle(fullTitle)
 
-    const authorName = $book.find('authors author').first().find('name').first().text().trim()
+    const authorName = $book.children('authors').children('author').first().children('name').first().text().trim()
 
     const description = $book.children('description').first().text().trim()
 
@@ -193,7 +195,7 @@ export default class GoodreadsProvider extends BaseProvider {
     const publisher = $book.children('publisher').first().text().trim()
     const languageCode = $book.children('language_code').first().text().trim()
 
-    const originalPubYear = $book.find('work original_publication_year').first().text().trim()
+    const originalPubYear = $book.children('work').children('original_publication_year').first().text().trim()
     const pubYear = $book.children('publication_year').first().text().trim()
     const publishedYear = pubYear
 
@@ -222,7 +224,7 @@ export default class GoodreadsProvider extends BaseProvider {
     title: string,
     publishedYear: string
   ): BookMetadata['work'] {
-    const id = book.find('work id').first().text().trim()
+    const id = book.children('work').children('id').first().text().trim()
     if (!id) return undefined
 
     const value = Number(book.children('average_rating').text())
@@ -240,18 +242,19 @@ export default class GoodreadsProvider extends BaseProvider {
       })
     }
 
-    const originalTitle = book.find('work original_title').first().text().trim()
+    const originalTitle = book.children('work').children('original_title').first().text().trim()
 
     return { id, title: originalTitle || title, publishedYear: publishedYear || undefined, ratings }
   }
 
   private parseContributors($: cheerio.CheerioAPI, book: ReturnType<cheerio.CheerioAPI>): Contributor[] {
     return book
-      .find('authors author')
+      .children('authors')
+      .children('author')
       .toArray()
       .flatMap((element) => {
         const author = $(element)
-        const name = author.find('name').first().text().trim()
+        const name = author.children('name').first().text().trim()
         const sourceId = author.children('id').first().text().trim()
         if (!name) return []
 
@@ -262,17 +265,20 @@ export default class GoodreadsProvider extends BaseProvider {
   private parseSeries($: cheerio.CheerioAPI, book: ReturnType<cheerio.CheerioAPI>): SeriesMetadata[] {
     const series: SeriesMetadata[] = []
 
-    book.find('series_works series_work').each((_, element) => {
-      const membership = $(element)
-      const name = membership.find('series title').first().text().trim()
-      if (!name) return
+    book
+      .children('series_works')
+      .children('series_work')
+      .each((_, element) => {
+        const membership = $(element)
+        const name = membership.find('series title').first().text().trim()
+        if (!name) return
 
-      series.push({
-        series: name,
-        sourceId: membership.find('series id').first().text().trim() || undefined,
-        sequence: membership.children('user_position').first().text().trim() || undefined
+        series.push({
+          series: name,
+          sourceId: membership.find('series id').first().text().trim() || undefined,
+          sequence: membership.children('user_position').first().text().trim() || undefined
+        })
       })
-    })
 
     return series
   }
@@ -280,18 +286,21 @@ export default class GoodreadsProvider extends BaseProvider {
   private parseGenres($: cheerio.CheerioAPI, book: ReturnType<cheerio.CheerioAPI>): string[] {
     const genres: string[] = []
 
-    book.find('popular_shelves shelf').each((_, shelf) => {
-      if (genres.length >= 3) return
+    book
+      .children('popular_shelves')
+      .children('shelf')
+      .each((_, shelf) => {
+        if (genres.length >= 3) return
 
-      const name = $(shelf).attr('name')?.toLowerCase()
-      if (!name || !GENRE_SHELVES.has(name)) return
+        const name = $(shelf).attr('name')?.toLowerCase()
+        if (!name || !GENRE_SHELVES.has(name)) return
 
-      const label = name
-        .split('-')
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ')
-      genres.push(label)
-    })
+        const label = name
+          .split('-')
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ')
+        genres.push(label)
+      })
 
     return genres
   }

@@ -1,23 +1,38 @@
 import { z } from 'zod'
 import type { EntityKind, Identifier, MetadataEntity } from '../types'
 import { entityKindSchema } from '../types/metadata'
-import { stableHash } from '../metadata/identity'
-import type { MetadataDatabase } from './tables'
+import { normalizeSharedName, stableHash } from '../metadata/identity'
+import type { MetadataDatabase, NamedValueCategory } from './tables'
 
 const parametersSchema = z.array(z.tuple([z.string(), z.union([z.string(), z.number(), z.boolean()])]))
 
 export class IdentityRepository {
   constructor(private readonly database: MetadataDatabase) {}
 
-  async person(entityKey: number, name: string): Promise<number> {
+  async person(name: string): Promise<number> {
+    const normalizedName = normalizeSharedName(name)
     const row = await this.database
       .insertInto('people')
-      .values({ entity_key: entityKey, name })
-      .onConflict((conflict) => conflict.columns(['entity_key', 'name']).doUpdateSet({ name }))
+      .values({ normalized_name: normalizedName, name })
+      .onConflict((conflict) => conflict.column('normalized_name').doUpdateSet({ normalized_name: normalizedName }))
       .returning('person_key')
       .executeTakeFirstOrThrow()
 
     return row.person_key
+  }
+
+  async namedValue(category: NamedValueCategory, value: string): Promise<number> {
+    const normalizedName = normalizeSharedName(value)
+    const row = await this.database
+      .insertInto('named_values')
+      .values({ category, normalized_name: normalizedName, value })
+      .onConflict((conflict) =>
+        conflict.columns(['category', 'normalized_name']).doUpdateSet({ normalized_name: normalizedName })
+      )
+      .returning('value_key')
+      .executeTakeFirstOrThrow()
+
+    return row.value_key
   }
 
   async identifier(identifier: Identifier): Promise<number> {

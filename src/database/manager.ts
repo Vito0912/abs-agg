@@ -128,8 +128,10 @@ export class DatabaseManager {
     return cachedBundleSchema.nullable().parse(value)
   }
 
-  async storeBundle(command: Omit<Extract<DatabaseCommand, { operation: 'storeBundle' }>, 'operation'>): Promise<void> {
-    await this.execute({ operation: 'storeBundle', ...command })
+  async storeBundle(
+    command: Omit<Extract<DatabaseCommand, { operation: 'storeBundle' }>, 'operation'>
+  ): Promise<boolean> {
+    return z.boolean().parse(await this.execute({ operation: 'storeBundle', ...command }))
   }
 
   async ingestMetadata(

@@ -53,7 +53,7 @@ export class DatabaseMaintenance {
     }
   }
 
-  private async deleteUnusedVersions(): Promise<void> {
+  async deleteUnusedVersions(): Promise<void> {
     const cacheReferences = this.database.selectFrom('search_cache_members').select('version_key')
     const catalogReferences = this.database.selectFrom('catalog_entities').select('version_key')
     await this.database
@@ -90,9 +90,9 @@ export class DatabaseMaintenance {
           expression.not(
             expression.exists(
               expression
-                .selectFrom('people')
-                .select('person_key')
-                .whereRef('people.entity_key', '=', 'source_entities.entity_key')
+                .selectFrom('version_contributors')
+                .select('version_key')
+                .whereRef('version_contributors.author_key', '=', 'source_entities.entity_key')
             )
           ),
           expression.not(
@@ -125,6 +125,20 @@ export class DatabaseMaintenance {
   }
 
   private async deleteUnusedValues(): Promise<void> {
+    await this.database
+      .deleteFrom('named_values')
+      .where('value_key', 'not in', this.database.selectFrom('version_terms').select('value_key'))
+      .where(
+        'value_key',
+        'not in',
+        this.database.selectFrom('entity_versions').select('series_key').where('series_key', 'is not', null)
+      )
+      .where(
+        'value_key',
+        'not in',
+        this.database.selectFrom('entity_versions').select('publisher_key').where('publisher_key', 'is not', null)
+      )
+      .execute()
     await this.database
       .deleteFrom('identifier_values')
       .where('identifier_key', 'not in', this.database.selectFrom('version_identifiers').select('identifier_key'))

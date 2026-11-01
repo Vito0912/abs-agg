@@ -8,8 +8,17 @@ interface StateTable {
 
 interface PersonTable {
   person_key: Generated<number>
-  entity_key: number
+  normalized_name: string
   name: string
+}
+
+export type NamedValueCategory = 'series' | 'publisher' | 'genre' | 'tag' | 'alternative'
+
+interface NamedValueTable {
+  value_key: Generated<number>
+  category: NamedValueCategory
+  normalized_name: string
+  value: string
 }
 
 interface IdentifierValueTable {
@@ -60,6 +69,9 @@ export interface EntityVersionTable {
   subtitle: string | null
   image: string | null
   format: 'audiobook' | 'ebook' | null
+  person_name: string | null
+  series_key: number | null
+  publisher_key: number | null
   publisher: string | null
   publication_date: string | null
   publication_precision: string | null
@@ -83,6 +95,7 @@ interface VersionTermTable {
   version_key: number
   category: 'genre' | 'tag' | 'alternative'
   position: number
+  value_key: number
   value: string
 }
 
@@ -96,6 +109,8 @@ interface VersionContributorTable {
   version_key: number
   position: number
   person_key: number
+  author_key: number
+  name: string
   linked: number
   role: Contributor['role']
   source_identifier: number | null
@@ -195,6 +210,7 @@ interface SearchIndexTable {
 export interface DatabaseTables {
   state: StateTable
   people: PersonTable
+  named_values: NamedValueTable
   identifier_values: IdentifierValueTable
   scopes: ScopeTable
   scope_parameters: ScopeParameterTable

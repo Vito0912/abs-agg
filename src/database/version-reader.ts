@@ -15,7 +15,7 @@ async function selectVersions(database: MetadataDatabase, keys: number[]) {
       'entity.kind',
       'entity.scope_key',
       'source.value as source_id',
-      'person.name as person_name'
+      'person.name as canonical_person_name'
     ])
     .where('version.version_key', 'in', keys)
     .execute()
@@ -104,7 +104,7 @@ export class MetadataVersionReader {
           schemaVersion: 1,
           id: row.public_id,
           kind: row.kind,
-          name: row.name ?? row.person_name,
+          name: row.name ?? row.person_name ?? row.canonical_person_name,
           description: row.description ?? undefined,
           language: row.language ?? undefined,
           source: {
@@ -189,12 +189,12 @@ export class MetadataVersionReader {
     const rows = await this.database
       .selectFrom('version_contributors as credit')
       .innerJoin('people as person', 'person.person_key', 'credit.person_key')
-      .innerJoin('source_entities as author', 'author.entity_key', 'person.entity_key')
+      .innerJoin('source_entities as author', 'author.entity_key', 'credit.author_key')
       .leftJoin('identifier_values as source', 'source.identifier_key', 'credit.source_identifier')
       .select([
         'credit.version_key',
         'credit.role',
-        'person.name as name',
+        'credit.name as name',
         'credit.linked',
         'author.public_id',
         'source.value as source_id'

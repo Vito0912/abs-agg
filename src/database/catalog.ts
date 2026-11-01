@@ -12,8 +12,20 @@ export class CatalogRepository {
     return this.database
       .selectFrom('source_entities as entity')
       .innerJoin('catalog_entities as catalog', 'catalog.entity_key', 'entity.entity_key')
+      .innerJoin('entity_versions as version', 'version.version_key', 'catalog.version_key')
       .select(['entity.provider', 'entity.kind'])
-      .select((expression) => expression.fn.countAll<number>().as('count'))
+      .select((expression) => {
+        const identity = expression
+          .case()
+          .when('entity.kind', '=', 'author')
+          .then(expression.ref('version.person_key'))
+          .when('entity.kind', '=', 'series')
+          .then(expression.ref('version.series_key'))
+          .else(expression.ref('entity.entity_key'))
+          .end()
+
+        return expression.fn.count<number>(identity).distinct().as('count')
+      })
       .groupBy(['entity.provider', 'entity.kind'])
       .orderBy('entity.provider')
       .orderBy('entity.kind')

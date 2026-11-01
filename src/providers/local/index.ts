@@ -1,7 +1,7 @@
 import { dbManager } from '../../database/manager'
 import { availableCatalogProviders } from '../../metadata/catalog-providers'
 import { catalogBundle } from '../../metadata/bundle'
-import { normalizeIsbn } from '../../metadata/identity'
+import { normalizeIsbn, normalizeSharedName } from '../../metadata/identity'
 import { rankCandidates } from '../../metadata/search'
 import type { EntityKind, MetadataBundle, MetadataQuery, ParsedParameters } from '../../types'
 import { BaseProvider } from '../BaseProvider'
@@ -26,7 +26,16 @@ export default class LocalProvider extends BaseProvider {
         return entity.relations.filter((relation) => relation.type === 'editionOf').map((relation) => relation.targetId)
       })
     )
-    const results = ranked.filter((entity) => entity.kind !== 'work' || !representedWorks.has(entity.id))
+    const sharedNames = new Set<string>()
+    const results = ranked.filter((entity) => {
+      if (entity.kind === 'work' && representedWorks.has(entity.id)) return false
+      if (entity.kind !== 'author' && entity.kind !== 'series') return true
+
+      const identity = JSON.stringify([entity.kind, normalizeSharedName(entity.name)])
+      if (sharedNames.has(identity)) return false
+      sharedNames.add(identity)
+      return true
+    })
     const matches = results.slice(0, limit).map((entity) => entity.id)
     const entities = await dbManager.loadEntities(matches, providers)
 

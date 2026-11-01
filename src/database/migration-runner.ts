@@ -2,7 +2,7 @@ import Database from 'better-sqlite3'
 import { z } from 'zod'
 import { Kysely, SqliteAdapter, SqliteDialect, sql } from 'kysely'
 import { Migrator } from 'kysely/migration'
-import type { Migration } from 'kysely/migration'
+import type { Migration, MigrationResult as KyselyMigrationResult } from 'kysely/migration'
 import { existsSync } from 'node:fs'
 import { unlink } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
@@ -37,12 +37,17 @@ export async function migrateDatabase(sqlite: Database.Database, databasePath: s
   if (version === 0) await ensureEmptyDatabase(database)
 
   const recovery = backupPath ? ` A backup was retained at ${backupPath}.` : ''
-  sqlite.pragma('foreign_keys = OFF')
   try {
-    const result = await migrator.migrateToLatest()
-    if (result.error) {
-      const cause = result.error instanceof Error ? result.error : new Error(String(result.error))
-      throw new Error(`Metadata migration failed: ${cause.message}${recovery}`, { cause })
+    const results: KyselyMigrationResult[] = []
+    for (const migration of pending) {
+      const rebuildsTables = migration.name === '024_1_1_0_shared_metadata' || version === 1 || version === 2
+      sqlite.pragma(rebuildsTables ? 'foreign_keys = OFF' : 'foreign_keys = ON')
+      const result = await migrator.migrateTo(migration.name)
+      if (result.error) {
+        const cause = result.error instanceof Error ? result.error : new Error(String(result.error))
+        throw new Error(`Metadata migration failed: ${cause.message}${recovery}`, { cause })
+      }
+      results.push(...(result.results ?? []))
     }
     if (
       sqlite.pragma('integrity_check', { simple: true }) !== 'ok' ||
@@ -58,10 +63,9 @@ export async function migrateDatabase(sqlite: Database.Database, databasePath: s
     if (backupPath) await unlink(backupPath)
 
     return {
-      applied:
-        result.results
-          ?.filter((migration) => migration.status === 'Success')
-          .map((migration) => migration.migrationName) ?? [],
+      applied: results
+        .filter((migration) => migration.status === 'Success')
+        .map((migration) => migration.migrationName),
       rebuilt: pending.length > 0 && (version === 1 || version === 2)
     }
   } finally {

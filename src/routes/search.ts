@@ -6,7 +6,7 @@ import { absMatches } from '../metadata/projection'
 import { enrichMetadata } from '../metadata/enrichment'
 import { availableCatalogProviders } from '../metadata/catalog-providers'
 import type { MetadataBundle, MetadataQuery } from '../types'
-import { setRequestLogAttributes } from '../telemetry/context'
+import { setRequestLogAttributes, setSearchCacheLogAttributes } from '../telemetry/context'
 import { browserSourceError, shouldRejectBrowserRequest } from '../middleware/browserSource'
 
 const querySchema = z.object({
@@ -36,6 +36,8 @@ async function search(req: Request): Promise<MetadataBundle> {
 
   const query = parseQuery(req)
   const params = { ...req.parsedParams }
+
+  setSearchCacheLogAttributes(false)
 
   const provider = req.provider
   const providerId = provider.getConfig().id

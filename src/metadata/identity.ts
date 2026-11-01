@@ -5,6 +5,14 @@ export function stableHash(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex')
 }
 
+export function normalizeSharedName(name: string): string {
+  return name.normalize('NFC').trim().replace(/\s+/g, ' ').toLowerCase()
+}
+
+export function inferredNameSourceId(name: string): string {
+  return `name:${stableHash(normalizeSharedName(name))}`
+}
+
 export function parameterKey(params: ParsedParameters): string {
   return stableHash(Object.entries(params).sort(([left], [right]) => left.localeCompare(right)))
 }

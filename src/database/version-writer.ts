@@ -1,7 +1,7 @@
 import type { Author, Book, Chapter, MetadataEntity, Series, Work } from '../types'
 import type { EntityVersionTable, MetadataDatabase } from './tables'
 
-import { entityId, normalizeText, stableHash } from '../metadata/identity'
+import { entityId, inferredNameSourceId, stableHash } from '../metadata/identity'
 import { IdentityRepository } from './identities'
 
 type VersionDetails = Pick<
@@ -9,7 +9,10 @@ type VersionDetails = Pick<
   | 'subtitle'
   | 'image'
   | 'format'
+  | 'publisher_key'
   | 'publisher'
+  | 'person_name'
+  | 'series_key'
   | 'publication_date'
   | 'publication_precision'
   | 'duration_seconds'
@@ -44,7 +47,7 @@ export class MetadataVersionWriter {
     if (existing) return existing.version_key
 
     const entityKey = await this.identities.register(entity)
-    const personKey = entity.kind === 'author' ? await this.identities.person(entityKey, entity.name) : null
+    const personKey = entity.kind === 'author' ? await this.identities.person(entity.name) : null
     const sourceUrlIsKey = entity.source.url === entity.source.sourceId
     const version = await this.database
       .insertInto('entity_versions')
@@ -61,7 +64,13 @@ export class MetadataVersionWriter {
         source_url_is_key: Number(sourceUrlIsKey),
         fetched_at: entity.source.fetchedAt,
         created_at: createdAt,
-        ...this.detailValues(entity)
+        ...this.detailValues(entity),
+        person_name: entity.kind === 'author' ? entity.name : null,
+        series_key: entity.kind === 'series' ? await this.identities.namedValue('series', entity.name) : null,
+        publisher_key:
+          entity.kind === 'book' && entity.publisher
+            ? await this.identities.namedValue('publisher', entity.publisher)
+            : null
       })
       .returning('version_key')
       .executeTakeFirstOrThrow()
@@ -83,7 +92,10 @@ export class MetadataVersionWriter {
       subtitle: null,
       image: 'image' in entity ? (entity.image ?? null) : null,
       format: null,
+      publisher_key: null,
       publisher: null,
+      person_name: null,
+      series_key: null,
       publication_date: null,
       publication_precision: null,
       duration_seconds: null,
@@ -124,11 +136,11 @@ export class MetadataVersionWriter {
     await this.storeTerms(versionKey, 'tag', entity.tags)
 
     for (const [position, contributor] of entity.contributors.entries()) {
-      const inferredSourceId = contributor.sourceId || `name:${normalizeText(contributor.name)}`
-      const scope = contributor.sourceId ? entity.source.scope : '[]'
+      const inferredSourceId = contributor.sourceId || inferredNameSourceId(contributor.name)
+      const scope = entity.source.scope
       const authorId = contributor.authorId || entityId(entity.source.provider, 'author', inferredSourceId, scope)
       const authorKey = await this.identities.reference(authorId, entity.source.provider, 'author')
-      const personKey = await this.identities.person(authorKey, contributor.name)
+      const personKey = await this.identities.person(contributor.name)
       const sourceIdentifier =
         contributor.sourceId === undefined
           ? null
@@ -143,6 +155,8 @@ export class MetadataVersionWriter {
           version_key: versionKey,
           position,
           person_key: personKey,
+          author_key: authorKey,
+          name: contributor.name,
           linked: Number(Boolean(contributor.authorId)),
           role: contributor.role,
           source_identifier: sourceIdentifier
@@ -170,9 +184,10 @@ export class MetadataVersionWriter {
 
   private async storeTerms(versionKey: number, category: 'genre' | 'tag' | 'alternative', values: string[]) {
     for (const [position, value] of values.entries()) {
+      const valueKey = await this.identities.namedValue(category, value)
       await this.database
         .insertInto('version_terms')
-        .values({ version_key: versionKey, category, position, value })
+        .values({ version_key: versionKey, category, position, value, value_key: valueKey })
         .execute()
     }
   }
@@ -236,6 +251,7 @@ function bookValues(book: Book): Partial<VersionDetails> {
     subtitle: book.subtitle ?? null,
     format: book.format ?? null,
     publisher: book.publisher ?? null,
+
     publication_date: book.published?.value ?? null,
     publication_precision: book.published?.precision ?? null,
     duration_seconds: book.durationSeconds ?? null,

@@ -57,6 +57,7 @@ export abstract class BaseProvider {
       key,
       provider: this.config.id,
       ttlMs: cacheSettings.searchTtlMs,
+      type: 'search',
       load: () => runWithProviderCooldown(this.config.id, () => this.searchEntities(query, params))
     })
 
