@@ -8,6 +8,7 @@ import { availableCatalogProviders } from '../metadata/catalog-providers'
 import type { MetadataBundle, MetadataQuery } from '../types'
 import { setRequestLogAttributes, setSearchCacheLogAttributes } from '../telemetry/context'
 import { browserSourceError, shouldRejectBrowserRequest } from '../middleware/browserSource'
+import { ProviderCooldownError, providerRetryAfterMs } from '../providers/rateLimit'
 
 const querySchema = z.object({
   title: z.string().trim().min(1).max(500),
@@ -98,8 +99,35 @@ function sendSearchError(error: unknown, req: Request, res: Response): void {
     return
   }
 
+  const provider = req.provider?.getConfig().id || 'none'
+  const retryAfterMs = providerRetryAfterMs(provider, error)
+  if (retryAfterMs !== undefined) {
+    const retryAfterSeconds = Math.max(1, Math.ceil(retryAfterMs / 1000))
+    const attributes = errorAttributes(error)
+    if (error instanceof ProviderCooldownError && error.cause !== undefined) {
+      for (const [key, value] of Object.entries(errorAttributes(error.cause))) {
+        attributes[`cause.${key}`] = value
+      }
+    }
+    if (!(error instanceof ProviderCooldownError)) attributes['upstream.http.response.status_code'] = 429
+
+    logger.warn('Provider temporarily unavailable after upstream rate limit', {
+      ...attributes,
+      provider,
+      'retry_after.seconds': retryAfterSeconds,
+      'http.response.status_code': 503
+    })
+    if (!res.headersSent) {
+      res.setHeader('Retry-After', String(retryAfterSeconds))
+      res.status(503).json({
+        error: `${provider} is temporarily unavailable after an upstream rate limit. Retry in ${retryAfterSeconds} seconds.`
+      })
+    }
+    return
+  }
+
   logger.error('Provider request failed', {
-    provider: req.provider?.getConfig().id || 'none',
+    provider,
     ...errorAttributes(error)
   })
   if (!res.headersSent) res.status(500).json({ error: 'Metadata provider request failed' })

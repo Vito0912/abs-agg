@@ -79,7 +79,7 @@ export const observeHttpRequest: RequestHandler = (req, res, next) => {
         activeRequests.add(-1, { 'http.request.method': method })
         if (process.env.LOG_REQUESTS === 'true') {
           const logAttributes = { ...attributes, duration_seconds: durationSeconds }
-          if (status >= 500 || aborted) logger.error('HTTP request completed', logAttributes)
+          if (aborted || (status >= 500 && status !== 503)) logger.error('HTTP request completed', logAttributes)
           else if (status >= 400) logger.warn('HTTP request completed', logAttributes)
           else logger.info('HTTP request completed', logAttributes)
         }

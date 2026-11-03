@@ -1,6 +1,11 @@
 const DEFAULT_PROVIDER_COOLDOWN_MS = 60_000
 const MINIMUM_PROVIDER_COOLDOWN_MS = 1_000
-const cooldownUntil = new Map<string, number>()
+interface ProviderCooldown {
+  until: number
+  cause?: unknown
+}
+
+const cooldowns = new Map<string, ProviderCooldown>()
 
 export class ProviderRateLimitError extends Error {
   constructor(
@@ -14,33 +19,55 @@ export class ProviderRateLimitError extends Error {
 }
 
 export class ProviderCooldownError extends Error {
-  constructor(provider: string, retryAfterMs: number) {
+  constructor(
+    provider: string,
+    readonly retryAfterMs: number,
+    options?: ErrorOptions
+  ) {
     super(
-      `${provider} is temporarily paused after an upstream rate limit. Retry in ${Math.ceil(retryAfterMs / 1000)} seconds.`
+      `${provider} is temporarily paused after an upstream rate limit. Retry in ${Math.ceil(retryAfterMs / 1000)} seconds.`,
+      options
     )
     this.name = 'ProviderCooldownError'
   }
 }
 
-export function pauseProvider(provider: string, durationMs = DEFAULT_PROVIDER_COOLDOWN_MS): void {
+export function pauseProvider(provider: string, durationMs = DEFAULT_PROVIDER_COOLDOWN_MS, cause?: unknown): void {
   const requestedDuration = Number.isFinite(durationMs) ? durationMs : DEFAULT_PROVIDER_COOLDOWN_MS
   const boundedDuration = Math.max(MINIMUM_PROVIDER_COOLDOWN_MS, requestedDuration)
   const until = Date.now() + boundedDuration
-  cooldownUntil.set(provider, Math.max(cooldownUntil.get(provider) || 0, until))
+  const existing = cooldowns.get(provider)
+  cooldowns.set(provider, {
+    until: Math.max(existing?.until || 0, until),
+    cause: cause ?? existing?.cause
+  })
 }
 
 export async function runWithProviderCooldown<T>(provider: string, operation: () => Promise<T>): Promise<T> {
-  const remainingMs = (cooldownUntil.get(provider) || 0) - Date.now()
-  if (remainingMs > 0) throw new ProviderCooldownError(provider, remainingMs)
-  cooldownUntil.delete(provider)
+  const cooldown = cooldowns.get(provider)
+  const remainingMs = (cooldown?.until || 0) - Date.now()
+  if (remainingMs > 0) throw new ProviderCooldownError(provider, remainingMs, { cause: cooldown?.cause })
+  cooldowns.delete(provider)
 
   try {
     return await operation()
   } catch (error) {
     const durationMs = cooldownDuration(error)
-    if (durationMs !== undefined) pauseProvider(provider, durationMs)
+    if (durationMs !== undefined) pauseProvider(provider, durationMs, error)
     throw error
   }
+}
+
+export function providerRetryAfterMs(provider: string, error: unknown): number | undefined {
+  if (error instanceof ProviderCooldownError) return error.retryAfterMs
+
+  const durationMs = cooldownDuration(error)
+  if (durationMs === undefined) return undefined
+
+  const remainingMs = (cooldowns.get(provider)?.until || 0) - Date.now()
+  const requestedDuration = Number.isFinite(durationMs) ? durationMs : DEFAULT_PROVIDER_COOLDOWN_MS
+
+  return Math.max(MINIMUM_PROVIDER_COOLDOWN_MS, remainingMs, requestedDuration)
 }
 
 function cooldownDuration(error: unknown): number | undefined {
