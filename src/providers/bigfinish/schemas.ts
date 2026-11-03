@@ -17,7 +17,7 @@ export const bigFinishSearchResultSchema = z.object({
 })
 
 export const bigFinishSearchResponseSchema = z.object({
-  hits: z.array(bigFinishSearchResultSchema),
+  hits: z.array(z.looseObject({ indexUid: z.string() })),
   estimatedTotalHits: z.number(),
   limit: z.number(),
   offset: z.number(),

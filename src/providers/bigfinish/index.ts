@@ -4,7 +4,7 @@ import type { BookMetadata, ParsedParameters, ProviderConfig } from '../../types
 import { normalizeBookMetadata } from '../../utils/helpers'
 import { httpClient } from '../../utils/httpClient'
 import { BaseProvider } from '../BaseProvider'
-import { bigFinishReleaseDataSchema, bigFinishSearchResponseSchema } from './schemas'
+import { bigFinishReleaseDataSchema, bigFinishSearchResponseSchema, bigFinishSearchResultSchema } from './schemas'
 import type { BigFinishReleaseData, BigFinishSearchResult, NamedContributor, ParsedBookData } from './types'
 
 const BASE_URL = 'https://www.bigfinish.com'
@@ -45,7 +45,9 @@ export default class BigFinishProvider extends BaseProvider {
     }
 
     const searchData = bigFinishSearchResponseSchema.parse(searchRes.data)
-    const hits = (searchData.hits.filter((hit) => hit.indexUid == 'audiobook_models') ?? []).slice(0, limit)
+    const hits = (searchData.hits.filter((hit) => hit.indexUid == 'audiobook_models') ?? [])
+      .slice(0, limit)
+      .map((hit) => bigFinishSearchResultSchema.parse(hit))
 
     const books: BookMetadata[] = []
 
