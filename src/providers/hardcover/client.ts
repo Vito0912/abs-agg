@@ -38,20 +38,28 @@ export class HardcoverClient {
     return runWithProviderCooldown('hardcover', async () => {
       const [book, editions] = await Promise.all([
         this.client.books.get(id),
-        this.client.books.editions(id, { limit: 10 })
+        this.client.books.editions(id, { limit: 100 })
       ])
       if (!book) return []
 
       const audioEdition = editions.items.find((edition) => edition.readingFormatId === ReadingFormat.Audiobook)
-      const ebookEditions = editions.items.filter((edition) => edition.readingFormatId === ReadingFormat.Ebook)
-      const adaptedBook = hardcoverBookSchema.parse(adaptBook(book, searchHit, audioEdition, ebookEditions))
+      const physicalEdition = editions.items.find((edition) => edition.readingFormatId === ReadingFormat.Physical)
+      const adaptedBook = hardcoverBookSchema.parse(
+        adaptBook(book, searchHit, audioEdition, editions.items, physicalEdition)
+      )
 
       return [adaptedBook]
     })
   }
 }
 
-function adaptBook(book: Book, searchHit: BookHit, audioEdition: Edition | undefined, ebookEditions: Edition[]) {
+function adaptBook(
+  book: Book,
+  searchHit: BookHit,
+  audioEdition: Edition | undefined,
+  editions: Edition[],
+  physicalEdition: Edition | undefined
+) {
   return {
     id: book.id,
     slug: book.slug,
@@ -79,7 +87,8 @@ function adaptBook(book: Book, searchHit: BookHit, audioEdition: Edition | undef
       return tags?.map((tag) => ({ tag: { tag: tag.tag } })) ?? []
     }),
     default_audio_edition: audioEdition ? adaptEdition(audioEdition) : undefined,
-    editions: ebookEditions.map(adaptEdition)
+    default_physical_edition: physicalEdition ? adaptEdition(physicalEdition) : undefined,
+    editions: editions.map(adaptEdition)
   }
 }
 

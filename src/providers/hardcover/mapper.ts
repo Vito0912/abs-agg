@@ -1,3 +1,4 @@
+import { ReadingFormat } from '@hardcover/sdk'
 import type { BookMetadata, Contributor, Rating, SeriesMetadata } from '../../types'
 import { normalizeBookMetadata } from '../../utils/helpers'
 import type { HardcoverBook, HardcoverEdition } from './types'
@@ -53,7 +54,7 @@ function workRatings(book: HardcoverBook): Rating[] {
   ]
 }
 
-function mapEdition(book: HardcoverBook, edition: HardcoverEdition, format: 'audiobook' | 'ebook'): BookMetadata {
+function mapEdition(book: HardcoverBook, edition: HardcoverEdition, format?: BookMetadata['format']): BookMetadata {
   return normalizeBookMetadata({
     title: edition.title || book.title,
     subtitle: edition.subtitle || book.subtitle,
@@ -69,7 +70,7 @@ function mapEdition(book: HardcoverBook, edition: HardcoverEdition, format: 'aud
     publishedYear: edition.release_year,
     language: edition.language?.language,
     durationSeconds: format === 'audiobook' ? edition.audio_seconds : undefined,
-    pageCount: format === 'ebook' ? edition.pages : undefined,
+    pageCount: format !== 'audiobook' ? edition.pages : undefined,
     series: bookSeries(book),
     work: {
       id: String(book.id),
@@ -92,10 +93,15 @@ export function mapHardcoverBook(book: HardcoverBook): BookMetadata[] {
   if (book.default_audio_edition?.id) {
     editions.push(mapEdition(book, book.default_audio_edition, 'audiobook'))
   }
-  for (const edition of book.editions || []) {
-    if (edition.id && edition.reading_format_id === 4) {
-      editions.push(mapEdition(book, edition, 'ebook'))
-    }
+  const ebookEditions = (book.editions || []).filter(
+    (edition) => edition.id && edition.reading_format_id === ReadingFormat.Ebook
+  )
+  for (const edition of ebookEditions) {
+    editions.push(mapEdition(book, edition, 'ebook'))
+  }
+
+  if (ebookEditions.length === 0 && book.default_physical_edition?.id) {
+    editions.push(mapEdition(book, book.default_physical_edition))
   }
 
   if (editions.length > 0) return editions
@@ -116,4 +122,23 @@ export function mapHardcoverBook(book: HardcoverBook): BookMetadata[] {
       tags: book.taggings?.flatMap((entry) => (entry.tag?.tag ? [entry.tag.tag] : []))
     })
   ]
+}
+
+export function mapHardcoverEditions(book: HardcoverBook): BookMetadata[] {
+  if (!book.id || !book.title) return []
+
+  const sourceEditions = [book.default_audio_edition, ...(book.editions || []), book.default_physical_edition]
+  const editions = new Map<number, BookMetadata>()
+
+  for (const edition of sourceEditions) {
+    if (!edition?.id || editions.has(edition.id)) continue
+
+    let format: BookMetadata['format']
+    if (edition.reading_format_id === ReadingFormat.Audiobook) format = 'audiobook'
+    if (edition.reading_format_id === ReadingFormat.Ebook) format = 'ebook'
+
+    editions.set(edition.id, mapEdition(book, edition, format))
+  }
+
+  return editions.size > 0 ? [...editions.values()] : mapHardcoverBook(book)
 }
