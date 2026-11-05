@@ -9,6 +9,7 @@ import { OutboundPolicyError, validateUpstreamUrl } from './outboundPolicy'
 
 type UpstreamRequestOptions = Pick<AxiosRequestConfig, 'headers' | 'params' | 'responseType'> & {
   maxRedirects?: 0
+  retry?: boolean
 }
 
 export class UpstreamError extends Error {
@@ -104,7 +105,7 @@ function canRetry(error: unknown): boolean {
   return status === 502 || status === 503 || status === 504 || !error.response
 }
 
-async function request<T>(config: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+async function request<T>(config: AxiosRequestConfig, retry = true): Promise<AxiosResponse<T>> {
   if (!config.url) throw new Error('Upstream URL is required')
   const url = validateUpstreamUrl(config.url)
   config.url = url.href
@@ -117,7 +118,7 @@ async function request<T>(config: AxiosRequestConfig): Promise<AxiosResponse<T>>
   const release = await hostQueue(config.url).acquire()
 
   try {
-    return await send<T>(config)
+    return await send<T>(config, retry)
   } catch (error) {
     if (axios.isAxiosError(error)) {
       throw new UpstreamError(
@@ -143,11 +144,11 @@ export function parseRetryAfterMs(value: unknown): number | undefined {
   return milliseconds
 }
 
-async function send<T>(config: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+async function send<T>(config: AxiosRequestConfig, retry: boolean): Promise<AxiosResponse<T>> {
   try {
     return await sendWithinDeadline<T>(config)
   } catch (error) {
-    if (config.method !== 'GET' || !canRetry(error)) throw error
+    if (!retry || config.method !== 'GET' || !canRetry(error)) throw error
 
     const waitMs = retryDelayMs(error)
     if (waitMs === undefined || waitMs >= remainingRequestMs()) throw error
@@ -199,9 +200,11 @@ async function sendWithinDeadline<T>(config: AxiosRequestConfig): Promise<AxiosR
 
 export const httpClient = {
   get<T = unknown>(url: string, config: UpstreamRequestOptions = {}): Promise<AxiosResponse<T>> {
-    return request<T>({ ...config, url, method: 'GET' })
+    const { retry, ...options } = config
+    return request<T>({ ...options, url, method: 'GET' }, retry)
   },
   post<T = unknown>(url: string, data: unknown, config: UpstreamRequestOptions = {}): Promise<AxiosResponse<T>> {
-    return request<T>({ ...config, url, data, method: 'POST' })
+    const { retry, ...options } = config
+    return request<T>({ ...options, url, data, method: 'POST' }, retry)
   }
 }

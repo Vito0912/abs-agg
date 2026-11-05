@@ -22,6 +22,7 @@ abs-agg named after "aggregate" and the German "AGG", because each provider shou
 - Hardcover
 - Libro.fm
 - LibriVox
+- MusicBrainz
 - Nextory
 - OverDrive
 - Podium Entertainment

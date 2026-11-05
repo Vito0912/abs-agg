@@ -23,6 +23,7 @@ const allowedHosts = new Set([
   'api.hardcover.app',
   'librivox.org',
   'libro.fm',
+  'musicbrainz.org',
   'api.nextory.com',
   'thunder.api.overdrive.com',
   'podiumentertainment.com',

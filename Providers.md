@@ -1,6 +1,6 @@
 # Metadata Providers
 
-Total Providers: 22
+Total Providers: 23
 
 ## Table of Contents
 
@@ -19,6 +19,7 @@ Total Providers: 22
 - [LibriVox](#librivox)
 - [Libro.fm](#librofm)
 - [Local catalog](#local)
+- [MusicBrainz](#musicbrainz)
 - [Nextory](#nextory)
 - [OverDrive](#overdrive)
 - [Podium Entertainment](#podium)
@@ -754,6 +755,58 @@ GET /librofm/search?title=example&author=author
 ```
 GET /local/search?title=example&author=author
 ```
+
+---
+
+## MusicBrainz
+
+**ID:** `musicbrainz`
+
+**Description:** Audiobook releases from MusicBrainz, with author and narrator credits, linked literary works, and track chapters
+
+**Metadata provider:** [MusicBrainz](https://musicbrainz.org/)
+
+### Parameters
+
+#### Optional Parameters
+
+| Name | Type | Validation | Default | Description |
+|------|------|------------|---------|-------------|
+| `limit` | int | 1-10 | 5 | Maximum audiobook releases to return |
+
+### Returned Fields
+
+- `title`
+- `author`
+- `narrator`
+- `publisher`
+- `publishedYear`
+- `language`
+- `duration`
+- `isbn`
+- `asin`
+- `cover`
+- `genres`
+- `series`
+- `bookId`
+
+### Example Request
+
+```
+GET /musicbrainz/search?title=example&author=author
+```
+
+### Add to Audiobookshelf
+
+```
+https://provider.vito0912.de/musicbrainz
+```
+
+Under "Auth" use `abs`
+
+For deployments with authentication enabled, use the configured `AUTH_TOKEN` instead.
+
+> The URL can be replaced by your own deployment. The hosted provider can break at any moment.
 
 ---
 
