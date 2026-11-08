@@ -309,6 +309,7 @@ For deployments with authentication enabled, use the configured `AUTH_TOKEN` ins
 
 | Name | Type | Validation | Default | Description |
 |------|------|------------|---------|-------------|
+| `limit` | int | 1-50 | 5 | Maximum books to return |
 | `includeErotic` | enum | [true, false] | false | Whether to include erotic books |
 | `includeHighResCovers` | enum | [true, false] | false | Whether to include high resolution covers. This highly increases cover loading time |
 

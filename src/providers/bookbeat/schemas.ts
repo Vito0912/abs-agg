@@ -1,17 +1,5 @@
 import { z } from 'zod'
 
-export const bookBeatSuggestSchema = z.object({
-  id: z.string(),
-  value: z.string(),
-  type: z.string(),
-  _links: z.object({
-    search: z.object({
-      href: z.string(),
-      method: z.string()
-    })
-  })
-})
-
 export const bookBeatBookSchema = z.object({
   id: z.number(),
   title: z.string(),
@@ -85,4 +73,8 @@ export const bookBeatBookSchema = z.object({
     .nullish()
     .transform((value) => value ?? undefined)
     .optional()
+})
+
+export const bookBeatSearchSchema = z.object({
+  _embedded: z.object({ books: bookBeatBookSchema.array() })
 })

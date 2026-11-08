@@ -52,6 +52,17 @@
       "description": "Market/country for the search (BookBeat region)"
     },
     {
+      "name": "limit",
+      "required": false,
+      "validation": {
+        "type": "int",
+        "min": 1,
+        "max": 50
+      },
+      "description": "Maximum books to return",
+      "default": 5
+    },
+    {
       "name": "includeErotic",
       "required": false,
       "validation": {
