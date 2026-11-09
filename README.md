@@ -30,7 +30,6 @@ abs-agg named after "aggregate" and the German "AGG", because each provider shou
 - Soundbooth Theater
 - Storytel
 - The StoryGraph
-
 - Local catalog
 
 For detailed documentation on each provider, see [Providers.md](Providers.md).
@@ -105,6 +104,10 @@ curl "http://localhost:3000/librivox/search?title=sherlock+holmes&author=doyle"
 > \
 > Example:
 > `http://localhost:3000/librivox/limit:10/search?title=sherlock+holmes&author=doyle`
+>
+> or
+>
+> `http://localhost:3000/librivox/limit:10/genre:Fiction/search?title=sherlock+holmes&author=doyle`
 >
 > For **ABS**! do not add `/search` at the end. Just use:\
 > `http://localhost:3000/librivox/limit:10
