@@ -31,8 +31,14 @@ export const librivoxSectionSchema = z.object({
   readers: z
     .array(
       z.object({
-        reader_id: z.string(),
-        display_name: z.string()
+        reader_id: z
+          .string()
+          .nullish()
+          .transform((value) => value ?? undefined),
+        display_name: z
+          .string()
+          .nullish()
+          .transform((value) => value ?? undefined)
       })
     )
     .nullish()
