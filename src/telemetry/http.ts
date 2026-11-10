@@ -8,6 +8,7 @@ import {
   SpanStatusCode,
   trace
 } from '@opentelemetry/api'
+import type { Attributes } from '@opentelemetry/api'
 import type { RequestHandler } from 'express'
 import { randomBytes } from 'node:crypto'
 import { logger } from './logger'
@@ -48,7 +49,17 @@ export const observeHttpRequest: RequestHandler = (req, res, next) => {
   const requestContext = trace.setSpan(parentContext, span)
   const startedAt = performance.now()
   let completed = false
+  let responseError: string | undefined
   activeRequests.add(1, { 'http.request.method': method })
+
+  const originalJson = res.json.bind(res)
+  res.json = ((body: unknown) => {
+    if (typeof body === 'object' && body !== null && 'error' in body && typeof body.error === 'string') {
+      responseError = body.error
+    }
+
+    return originalJson(body)
+  }) as typeof res.json
 
   const finish = (aborted: boolean): void => {
     if (completed) return
@@ -78,10 +89,14 @@ export const observeHttpRequest: RequestHandler = (req, res, next) => {
         requests.add(1, attributes)
         activeRequests.add(-1, { 'http.request.method': method })
         if (process.env.LOG_REQUESTS === 'true') {
-          const logAttributes = { ...attributes, duration_seconds: durationSeconds }
-          if (aborted || (status >= 500 && status !== 503)) logger.error('HTTP request completed', logAttributes)
-          else if (status >= 400) logger.warn('HTTP request completed', logAttributes)
-          else logger.info('HTTP request completed', logAttributes)
+          const logAttributes: Attributes = { ...attributes, duration_seconds: durationSeconds }
+          if (responseError) logAttributes['http.response.error'] = responseError
+
+          if (aborted || (status >= 500 && status !== 503)) {
+            logger.error(responseError || 'HTTP request completed', logAttributes)
+          } else if (status >= 400) {
+            logger.warn(responseError || 'HTTP request completed', logAttributes)
+          } else logger.info('HTTP request completed', logAttributes)
         }
         span.end()
       })
